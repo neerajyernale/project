@@ -1,0 +1,97 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">ADMINISTRATION <span>•</span> WMS360</div>
+    <h1>Users &amp; Roles</h1>
+    <p>Manage access, responsibilities and warehouse assignments.</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">⇩ <span>Export</span></button>
+    <button class="button button-primary">＋ <span>Invite user</span></button>
+  </div>
+</section>
+
+<section class="user-stats">
+  <div class="user-stat-card"><span class="user-stat-icon blue">♟</span><div><strong>{{ users.length }}</strong><small>Total users</small></div></div>
+  <div class="user-stat-card"><span class="user-stat-icon green">✓</span><div><strong>{{ activeCount() }}</strong><small>Active now</small></div></div>
+  <div class="user-stat-card"><span class="user-stat-icon orange">♟</span><div><strong>{{ roles.length }}</strong><small>Roles defined</small></div></div>
+  <div class="user-stat-card"><span class="user-stat-icon navy">⚒</span><div><strong>{{ permissionModules.length }}</strong><small>Permission modules</small></div></div>
+</section>
+
+<div class="users-roles-tabs">
+  <button class="ur-tab" [class.active]="view === 'users'" (click)="view = 'users'">Users</button>
+  <button class="ur-tab" [class.active]="view === 'roles'" (click)="view = 'roles'">Roles &amp; Permissions</button>
+</div>
+
+<ng-container *ngIf="view === 'users'; else rolesView">
+  <section class="panel table-panel">
+    <div class="table-controls">
+      <div class="table-search"><span>⌕</span><input placeholder="Search users..." /></div>
+      <div class="table-filter-row">
+        <button class="filter-chip">All roles ⌄</button>
+        <button class="filter-chip">All warehouses ⌄</button>
+        <button class="filter-chip">All status ⌄</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>WAREHOUSE</th><th>LAST LOGIN</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td>
+              <div class="user-cell">
+                <span class="user-avatar">{{ user.avatar }}</span>
+                <strong>{{ user.name }}</strong>
+              </div>
+            </td>
+            <td class="muted">{{ user.email }}</td>
+            <td><span class="role-badge">{{ user.role }}</span></td>
+            <td>{{ user.warehouse }}</td>
+            <td class="muted">{{ user.lastLogin }}</td>
+            <td><span class="status-badge" [ngClass]="statusClass(user.status)">{{ user.status }}</span></td>
+            <td><button class="action-link">Edit</button><button class="action-link">Roles</button><button class="row-menu">•••</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>Rows per page <b>20⌄</b></span>
+      <span>1–{{ users.length }} of {{ users.length }}</span>
+      <button disabled>‹</button><button class="selected-page">1</button><button>›</button>
+    </div>
+  </section>
+</ng-container>
+
+<ng-template #rolesView>
+  <section class="panel roles-panel">
+    <div class="roles-layout">
+      <aside class="roles-list">
+        <div class="roles-list-header"><h3>Roles</h3><button class="button button-primary button-sm">＋</button></div>
+        <button class="role-item" *ngFor="let role of roles" [class.active]="selectedRole === role" (click)="selectedRole = role">
+          <span>{{ role }}</span>
+          <small>{{ userCountForRole(role) }} users</small>
+        </button>
+      </aside>
+      <div class="permissions-area">
+        <div class="permissions-header">
+          <div><h3>{{ selectedRole }}</h3><p>Configure module-level permissions for this role</p></div>
+          <button class="button button-primary button-sm">✓ <span>Save permissions</span></button>
+        </div>
+        <div class="table-scroll">
+          <table class="permissions-table">
+            <thead><tr><th>MODULE</th><th>VIEW</th><th>CREATE</th><th>EDIT</th><th>DELETE</th><th>APPROVE</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let perm of permissionMatrix">
+                <td><strong>{{ perm.module }}</strong></td>
+                <td><span class="perm-check" [class.granted]="perm.view">{{ perm.view ? '✓' : '—' }}</span></td>
+                <td><span class="perm-check" [class.granted]="perm.create">{{ perm.create ? '✓' : '—' }}</span></td>
+                <td><span class="perm-check" [class.granted]="perm.edit">{{ perm.edit ? '✓' : '—' }}</span></td>
+                <td><span class="perm-check" [class.granted]="perm.delete">{{ perm.delete ? '✓' : '—' }}</span></td>
+                <td><span class="perm-check" [class.granted]="perm.approve">{{ perm.approve ? '✓' : '—' }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</ng-template>

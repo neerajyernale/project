@@ -1,0 +1,96 @@
+<div class="login-page">
+  <div class="login-left">
+    <div class="login-brand-area">
+      <div class="brand-mark large"><span></span><span></span><span></span></div>
+      <div class="login-brand-text">
+        <h2>WMS<span>360</span></h2>
+        <p>360° Warehouse Management</p>
+      </div>
+    </div>
+    <div class="login-hero">
+      <h1>Enterprise warehouse<br>operations, unified.</h1>
+      <p class="login-hero-sub">Track inventory across multiple warehouses, manage inbound and outbound flows, and monitor operational performance in real time.</p>
+      <div class="login-features">
+        <div class="login-feature"><span class="lf-icon">◫</span><div><strong>Real-time inventory</strong><small>Track stock across all locations</small></div></div>
+        <div class="login-feature"><span class="lf-icon">≡</span><div><strong>Order management</strong><small>From pick to ship in one view</small></div></div>
+        <div class="login-feature"><span class="lf-icon">↗</span><div><strong>Performance insights</strong><small>Analytics and reporting built in</small></div></div>
+      </div>
+    </div>
+    <div class="login-footer-text">© 2024 WMS360 Logistics. All rights reserved.</div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-form-wrap">
+      <div class="login-form-header">
+        <h2>Sign in to your account</h2>
+        <p>Enter your credentials to access the warehouse dashboard</p>
+      </div>
+
+      <div class="login-error-banner" *ngIf="loginError">
+        <span>!</span>
+        <div><strong>Authentication failed</strong><small>{{ loginError }}</small></div>
+      </div>
+
+      <form (ngSubmit)="handleLogin($event)" class="login-form">
+        <div class="form-group">
+          <label for="email">Email Address <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">✉</span>
+            <input
+              id="email"
+              type="email"
+              placeholder="admin@wms360.com"
+              [value]="email"
+              (input)="onEmailInput($event)"
+              [class.error]="emailTouched && !emailValid()"
+              (blur)="emailTouched = true"
+            />
+          </div>
+          <small class="field-error" *ngIf="emailTouched && !emailValid()">Please enter a valid email address</small>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">⚒</span>
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              placeholder="Enter your password"
+              [value]="password"
+              (input)="onPasswordInput($event)"
+              [class.error]="passwordTouched && !passwordValid()"
+              (blur)="passwordTouched = true"
+            />
+            <button type="button" class="password-toggle" (click)="toggleShowPassword()">
+              {{ showPassword ? '◉' : '◎' }}
+            </button>
+          </div>
+          <small class="field-error" *ngIf="passwordTouched && !passwordValid()">Password must be at least 6 characters</small>
+        </div>
+
+        <div class="login-options">
+          <label class="checkbox-wrap">
+            <input type="checkbox" [checked]="rememberMe" (change)="toggleRememberMe()" />
+            <span class="checkbox-custom"></span>
+            <small>Remember me for 30 days</small>
+          </label>
+          <button type="button" class="forgot-link">Forgot password?</button>
+        </div>
+
+        <button type="submit" class="login-submit" [class.loading]="isLoading" [disabled]="isLoading">
+          <ng-container *ngIf="isLoading">
+            <span class="spinner"></span> Signing in...
+          </ng-container>
+          <ng-container *ngIf="!isLoading">
+            Sign In →
+          </ng-container>
+        </button>
+      </form>
+
+      <div class="login-demo-hint">
+        <small>Demo credentials: <strong>admin@wms360.com</strong> / <strong>any password</strong></small>
+      </div>
+    </div>
+  </div>
+</div>

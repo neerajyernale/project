@@ -1,0 +1,79 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">WORKSPACE <span>•</span> WMS360</div>
+    <h1>{{ pageTitle }}</h1>
+    <p>{{ description }}</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">⇩ <span>Export</span></button>
+    <button class="button button-primary" (click)="addClick.emit()">＋ <span>{{ addLabel() }}</span></button>
+  </div>
+</section>
+
+<section class="module-kpi-strip" *ngIf="showKpis">
+  <div class="module-kpi" *ngFor="let kpi of moduleKpis()">
+    <span class="module-kpi-icon" [ngClass]="kpi.tone">{{ kpi.icon }}</span>
+    <div><strong>{{ kpi.value }}</strong><small>{{ kpi.label }}</small></div>
+  </div>
+</section>
+
+<section class="panel table-panel module-table">
+  <div class="table-controls">
+    <div class="table-search"><span>⌕</span><input placeholder="Search {{ pageTitle.toLowerCase() }}..." [value]="searchQuery" (input)="onSearchInput($event)" /></div>
+    <div class="table-filter-row">
+      <button class="filter-chip" *ngFor="let filter of filters()">{{ filter }} ⌄</button>
+      <button class="filter-clear">Clear all</button>
+    </div>
+    <span class="results-count">{{ filteredRows().length }} of {{ allRows().length }} records</span>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th *ngFor="let heading of headings()">{{ heading }}</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of filteredRows(); let i = index">
+          <td *ngFor="let heading of headings()" [class.muted-code]="isIdColumn(heading)">
+            <ng-container *ngIf="heading === 'STATUS'; else priorityCheck">
+              <span class="status-badge" [ngClass]="statusClass(row[heading])">{{ row[heading] }}</span>
+            </ng-container>
+            <ng-template #priorityCheck>
+              <ng-container *ngIf="heading === 'PRIORITY'; else plainCell">
+                <span class="status-badge" [ngClass]="priorityClass(row[heading])">{{ row[heading] }}</span>
+              </ng-container>
+              <ng-template #plainCell>{{ row[heading] }}</ng-template>
+            </ng-template>
+          </td>
+          <td>
+            <button class="action-link" (click)="viewClick.emit(row)">View</button>
+            <button class="action-link">Edit</button>
+            <button class="row-menu">•••</button>
+          </td>
+        </tr>
+        <tr class="empty-row" *ngIf="filteredRows().length === 0">
+          <td [attr.colspan]="headings().length + 1">
+            <div class="empty-state">
+              <span class="empty-icon">▱</span>
+              <strong>No {{ pageTitle.toLowerCase() }} found</strong>
+              <small>Try adjusting your search or filters</small>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span>Rows per page <b>20⌄</b></span>
+    <span>1–{{ Math.min(filteredRows().length, 20) }} of {{ filteredRows().length }}</span>
+    <button disabled>‹</button>
+    <button class="selected-page">1</button>
+    <button *ngIf="filteredRows().length > 20">2</button>
+    <button *ngIf="filteredRows().length > 40">3</button>
+    <button>›</button>
+  </div>
+</section>

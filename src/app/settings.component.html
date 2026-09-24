@@ -1,0 +1,51 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">CONFIGURATION <span>•</span> WMS360</div>
+    <h1>Settings</h1>
+    <p>Configure workspace preferences, alerts and security.</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">↺ <span>Reset</span></button>
+    <button class="button button-primary">✓ <span>Save changes</span></button>
+  </div>
+</section>
+
+<div class="settings-layout">
+  <aside class="settings-sidebar">
+    <button class="settings-nav-item" *ngFor="let section of sections"
+      [class.active]="activeSection === section.key"
+      (click)="activeSection = section.key">
+      <span class="settings-nav-icon">{{ section.icon }}</span>
+      <span>{{ section.label }}</span>
+    </button>
+  </aside>
+
+  <div class="settings-content">
+    <article class="panel settings-panel" *ngIf="currentSection() as section">
+      <div class="settings-panel-header">
+        <span class="settings-panel-icon">{{ section.icon }}</span>
+        <div><h2>{{ section.label }}</h2><p>{{ sectionHint(section.key) }}</p></div>
+      </div>
+      <div class="settings-form">
+        <div class="settings-field" *ngFor="let field of section.fields">
+          <div class="settings-field-label">
+            <strong>{{ field.label }}</strong>
+            <small *ngIf="field.hint">{{ field.hint }}</small>
+          </div>
+          <div class="settings-field-control" [ngSwitch]="field.type">
+            <input type="text" class="settings-input" [value]="field.value" *ngSwitchCase="'text'" />
+            <input type="password" class="settings-input" [value]="field.value" *ngSwitchCase="'password'" />
+            <textarea class="settings-textarea" rows="3" *ngSwitchCase="'textarea'">{{ field.value }}</textarea>
+            <div class="settings-select" *ngSwitchCase="'select'">
+              <span>{{ field.value }}</span>
+              <span class="settings-select-arrow">⌄</span>
+            </div>
+            <button class="toggle-switch" [class.on]="field.value" (click)="toggleField(section, field)" *ngSwitchCase="'toggle'">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</div>

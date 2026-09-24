@@ -1,0 +1,58 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">ANALYTICS <span>•</span> WMS360</div>
+    <h1>Reports</h1>
+    <p>Turn warehouse activity into actionable operational insight.</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">⇩ <span>Export all</span></button>
+    <button class="button button-primary">＋ <span>Schedule report</span></button>
+  </div>
+</section>
+
+<section class="report-filters panel">
+  <div class="report-filter-row">
+    <div class="report-filter-item">
+      <small>DATE RANGE</small>
+      <div class="filter-select">01 Jun 2024 — 24 Jun 2024 ⌄</div>
+    </div>
+    <div class="report-filter-item">
+      <small>WAREHOUSE</small>
+      <div class="filter-select">All warehouses ⌄</div>
+    </div>
+    <div class="report-filter-item">
+      <small>CATEGORY</small>
+      <div class="filter-select">All categories ⌄</div>
+    </div>
+    <div class="report-filter-actions">
+      <button class="button button-secondary button-sm">🖨 <span>Print</span></button>
+      <button class="button button-secondary button-sm">📄 <span>PDF</span></button>
+      <button class="button button-secondary button-sm">📊 <span>Excel</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="report-categories">
+  <article class="panel report-category-panel" *ngFor="let category of reportCategories">
+    <div class="report-category-header">
+      <span class="report-category-icon">{{ category.icon }}</span>
+      <div><h2>{{ category.title }}</h2><p>{{ category.reports.length }} reports available</p></div>
+    </div>
+    <div class="report-list">
+      <div class="report-item" *ngFor="let report of category.reports">
+        <span class="report-item-icon">{{ report.icon }}</span>
+        <div class="report-item-body">
+          <strong>{{ report.name }}</strong>
+          <small>{{ report.description }}</small>
+          <div class="report-item-meta">
+            <span class="report-last-run">Last run: {{ report.lastRun }}</span>
+          </div>
+        </div>
+        <div class="report-item-actions">
+          <button class="button button-secondary button-sm">👁 <span>Preview</span></button>
+          <button class="button button-primary button-sm">Run →</button>
+        </div>
+      </div>
+    </div>
+  </article>
+</section>

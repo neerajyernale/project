@@ -1,0 +1,188 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">OPERATIONS CENTER <span>•</span> {{ currentDate }}</div>
+    <h1>Warehouse Overview</h1>
+    <p>Monitor warehouse operations and inventory performance.</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">↻ <span>Refresh</span></button>
+    <button class="button button-primary">＋ <span>New operation</span><b>⌄</b></button>
+  </div>
+</section>
+
+<div class="dashboard-toolbar">
+  <div class="select-control">
+    <span class="warehouse-dot"></span>
+    <div><small>WAREHOUSE</small><strong>Mumbai Central Warehouse</strong></div>
+    <span>⌄</span>
+  </div>
+  <div class="date-control">▣ &nbsp; Last 30 days &nbsp;⌄</div>
+  <span class="live-indicator"><i></i> Live data</span>
+</div>
+
+<section class="kpi-grid">
+  <article class="kpi-card" *ngFor="let kpi of kpis">
+    <div class="kpi-top">
+      <span class="kpi-icon" [ngClass]="kpi.tone">{{ kpi.icon }}</span>
+      <span class="trend" [class.down]="!kpi.trendUp">
+        {{ kpi.trendUp ? '↑' : '↓' }} {{ kpi.trend }}
+        <small>vs last month</small>
+      </span>
+    </div>
+    <strong class="kpi-value">{{ kpi.value }}</strong>
+    <span class="kpi-label">{{ kpi.label }}</span>
+    <div class="mini-bars">
+      <i *ngFor="let bar of kpi.sparkline" [style.height.%]="bar"></i>
+    </div>
+  </article>
+</section>
+
+<section class="chart-grid">
+  <article class="panel inventory-chart">
+    <div class="panel-heading">
+      <div><h2>Inventory overview</h2><p>Stock distribution across warehouse locations</p></div>
+      <button class="more-button">•••</button>
+    </div>
+    <div class="legend">
+      <span><i class="legend-blue"></i>Available</span>
+      <span><i class="legend-sky"></i>Reserved</span>
+      <span><i class="legend-orange"></i>Damaged</span>
+      <span><i class="legend-slate"></i>In transit</span>
+    </div>
+    <div class="bar-chart">
+      <div class="y-axis"><span>150k</span><span>100k</span><span>50k</span><span>0</span></div>
+      <div class="chart-area">
+        <div class="grid-line line-1"></div>
+        <div class="grid-line line-2"></div>
+        <div class="grid-line line-3"></div>
+        <div class="bars">
+          <div class="bar-group"><i class="bar blue" style="height:84%"></i><i class="bar sky" style="height:32%"></i><i class="bar orange" style="height:10%"></i><i class="bar slate" style="height:25%"></i><small>Week 1</small></div>
+          <div class="bar-group"><i class="bar blue" style="height:72%"></i><i class="bar sky" style="height:38%"></i><i class="bar orange" style="height:12%"></i><i class="bar slate" style="height:31%"></i><small>Week 2</small></div>
+          <div class="bar-group"><i class="bar blue" style="height:91%"></i><i class="bar sky" style="height:42%"></i><i class="bar orange" style="height:8%"></i><i class="bar slate" style="height:22%"></i><small>Week 3</small></div>
+          <div class="bar-group current"><i class="bar blue" style="height:78%"></i><i class="bar sky" style="height:36%"></i><i class="bar orange" style="height:11%"></i><i class="bar slate" style="height:28%"></i><small>This week</small></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel capacity-card">
+    <div class="panel-heading">
+      <div><h2>Warehouse capacity</h2><p>Current space utilization</p></div>
+      <button class="more-button">•••</button>
+    </div>
+    <div class="donut-wrap">
+      <div class="donut">
+        <div><strong>78<span>%</span></strong><small>utilized</small></div>
+      </div>
+      <div class="capacity-detail">
+        <div><span class="legend-blue"></span><div><strong>39,000 m²</strong><small>Used capacity</small></div></div>
+        <div><span class="legend-light"></span><div><strong>11,000 m²</strong><small>Available space</small></div></div>
+        <div class="capacity-warning">Capacity is on track <b>+4.2%</b> from last week</div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="chart-grid lower-grid-three">
+  <article class="panel orders-panel">
+    <div class="panel-heading">
+      <div><h2>Orders overview</h2><p>Throughput performance in the last 7 days</p></div>
+      <button class="link-button">View details →</button>
+    </div>
+    <div class="line-chart">
+      <div class="line-y"><span>3k</span><span>2k</span><span>1k</span><span>0</span></div>
+      <div class="line-area">
+        <div class="grid-line line-1"></div><div class="grid-line line-2"></div><div class="grid-line line-3"></div>
+        <svg viewBox="0 0 700 200" preserveAspectRatio="none" aria-label="Orders throughput chart">
+          <path class="area-fill" d="M0,145 C60,120 75,130 115,102 S170,120 220,91 S280,105 330,78 S395,100 440,58 S500,81 550,49 S620,66 700,25 L700,200 L0,200Z"></path>
+          <path class="line-path" d="M0,145 C60,120 75,130 115,102 S170,120 220,91 S280,105 330,78 S395,100 440,58 S500,81 550,49 S620,66 700,25"></path>
+        </svg>
+        <div class="line-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+      </div>
+    </div>
+    <div class="chart-summary">
+      <span><i class="legend-blue"></i>Orders received <b>2,846</b></span>
+      <span><i class="legend-sky"></i>Orders shipped <b>2,412</b></span>
+      <span class="success-text">↑ 8.6% from last week</span>
+    </div>
+  </article>
+
+  <article class="panel order-status-card">
+    <div class="panel-heading">
+      <div><h2>Order status</h2><p>Distribution by fulfillment stage</p></div>
+      <button class="more-button">•••</button>
+    </div>
+    <div class="status-donut-wrap">
+      <div class="status-donut" [style.background]="donutGradient()">
+        <div class="status-donut-center">
+          <strong>2,846</strong><small>Total orders</small>
+        </div>
+      </div>
+      <div class="status-legend">
+        <div class="status-legend-item" *ngFor="let item of orderStatusData">
+          <span class="status-dot" [style.background]="item.color"></span>
+          <span class="status-label">{{ item.label }}</span>
+          <strong>{{ item.value }}%</strong>
+        </div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="lower-grid">
+  <article class="panel activity-panel">
+    <div class="panel-heading">
+      <div><h2>Recent activity</h2><p>Latest updates from your operation</p></div>
+      <button class="link-button">View all →</button>
+    </div>
+    <div class="activity-list">
+      <div class="activity-row" *ngFor="let activity of activities">
+        <span class="activity-icon" [ngClass]="activity.tone">{{ activity.icon }}</span>
+        <div>
+          <strong>{{ activity.title }}</strong>
+          <small>{{ activity.detail }}</small>
+          <time>{{ activity.time }}</time>
+        </div>
+      </div>
+    </div>
+  </article>
+  <article class="panel alerts-panel">
+    <div class="panel-heading">
+      <div><h2>Operational alerts</h2><p>Items requiring immediate attention</p></div>
+      <span class="alert-count">4</span>
+    </div>
+    <div class="alerts-list">
+      <div class="alert-row danger"><span class="alert-icon">!</span><div><strong>ORD-10462 is critically delayed</strong><small>26 items · Croma Retail</small></div><button class="alert-action">Resolve</button></div>
+      <div class="alert-row warning"><span class="alert-icon">△</span><div><strong>WH-BLR-001 at 91% capacity</strong><small>Bengaluru South Depot</small></div><button class="alert-action">View</button></div>
+      <div class="alert-row warning"><span class="alert-icon">△</span><div><strong>3 items below reorder level</strong><small>SKU-10078, SKU-10092, SKU-10134</small></div><button class="alert-action">Reorder</button></div>
+      <div class="alert-row info"><span class="alert-icon">⇥</span><div><strong>SHP-2051 arriving in 45 min</strong><small>TechSource India · 4,280 units</small></div><button class="alert-action">Prepare</button></div>
+    </div>
+  </article>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-heading">
+    <div><h2>Top moving products</h2><p>Products with the highest order volume this month</p></div>
+    <button class="link-button">View inventory →</button>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>PRODUCT</th><th>SKU</th><th>ORDERS</th><th>AVAILABLE STOCK</th><th>STATUS</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let product of products">
+          <td>
+            <div class="product-cell">
+              <span class="product-thumb" [ngClass]="product.tone">{{ product.short }}</span>
+              <div><strong>{{ product.name }}</strong><small>{{ product.category }}</small></div>
+            </div>
+          </td>
+          <td class="muted-code">{{ product.sku }}</td>
+          <td><strong>{{ product.orders }}</strong></td>
+          <td><strong>{{ product.stock }}</strong> <small class="muted">units</small></td>
+          <td><span class="status-badge" [ngClass]="product.statusTone">{{ product.status }}</span></td>
+          <td><button class="row-menu">•••</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

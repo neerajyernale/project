@@ -1,0 +1,193 @@
+<section class="page-header">
+  <div>
+    <div class="breadcrumb"><span (click)="goBack()">Warehouses</span><span class="breadcrumb-sep">/</span><span class="breadcrumb-current">{{ warehouse?.name }}</span></div>
+    <h1>{{ warehouse?.name }}</h1>
+    <p>{{ warehouse?.code }} · {{ warehouse?.city }} · Managed by {{ warehouse?.manager }}</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary" (click)="goBack()">← <span>Back</span></button>
+    <button class="button button-primary">✎ <span>Edit warehouse</span></button>
+  </div>
+</section>
+
+<ng-container *ngIf="warehouse as wh">
+  <section class="detail-stats-row">
+    <div class="detail-stat"><span class="detail-stat-label">Warehouse Code</span><strong class="detail-stat-value muted-code">{{ wh.code }}</strong></div>
+    <div class="detail-stat"><span class="detail-stat-label">Location</span><strong class="detail-stat-value">{{ wh.city }}</strong></div>
+    <div class="detail-stat"><span class="detail-stat-label">Total Capacity</span><strong class="detail-stat-value">{{ wh.capacity }}</strong></div>
+    <div class="detail-stat"><span class="detail-stat-label">Utilization</span><strong class="detail-stat-value">{{ wh.utilization }}%</strong></div>
+    <div class="detail-stat"><span class="detail-stat-label">Manager</span><strong class="detail-stat-value">{{ wh.manager }}</strong></div>
+    <div class="detail-stat"><span class="detail-stat-label">Status</span><span class="status-badge" [ngClass]="statusClass(wh.status)">{{ wh.status }}</span></div>
+  </section>
+
+  <div class="tab-bar">
+    <button class="tab-button" *ngFor="let tab of tabs" [class.active]="activeTab === tab" (click)="activeTab = tab">{{ tab }}</button>
+  </div>
+
+  <div class="tab-content" [ngSwitch]="activeTab">
+    <ng-container *ngSwitchCase="'Overview'">
+      <div class="overview-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><h2>Utilization summary</h2><p>Current capacity usage</p></div></div>
+          <div class="detail-donut-wrap">
+            <div class="detail-donut" [style.background]="'conic-gradient(#277bd5 0 ' + wh.utilization + '%, #e4ebf3 ' + wh.utilization + '% 100%)'">
+              <div class="detail-donut-center"><strong>{{ wh.utilization }}%</strong><small>utilized</small></div>
+            </div>
+            <div class="detail-capacity-bars">
+              <div class="cap-bar-row"><span>Used</span><div class="cap-bar-track"><div class="cap-bar-fill used" [style.width.%]="wh.utilization"></div></div><strong>{{ wh.utilization }}%</strong></div>
+              <div class="cap-bar-row"><span>Available</span><div class="cap-bar-track"><div class="cap-bar-fill available" [style.width.%]="100 - wh.utilization"></div></div><strong>{{ 100 - wh.utilization }}%</strong></div>
+            </div>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading"><div><h2>Zone summary</h2><p>{{ wh.zones.length }} operational zones</p></div></div>
+          <div class="zone-mini-list">
+            <div class="zone-mini-row" *ngFor="let zone of wh.zones">
+              <span class="zone-mini-name">{{ zone.name }}</span>
+              <div class="zone-mini-bar"><div [style.width.%]="zone.utilization" [ngClass]="zoneBarClass(zone.utilization)"></div></div>
+              <strong>{{ zone.utilization }}%</strong>
+            </div>
+          </div>
+        </article>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Zones'">
+      <section class="panel table-panel">
+        <div class="panel-heading"><div><h2>Warehouse zones</h2><p>{{ wh.zones.length }} zones across this facility</p></div><button class="button button-secondary button-sm">＋ <span>Add zone</span></button></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>ZONE</th><th>CODE</th><th>AREA</th><th>UTILIZATION</th><th>BINS</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let zone of wh.zones">
+                <td><strong>{{ zone.name }}</strong></td>
+                <td class="muted-code">{{ zone.code }}</td>
+                <td>{{ zone.area }}</td>
+                <td>
+                  <div class="util-cell">
+                    <div class="util-bar-track"><div class="util-bar-fill" [style.width.%]="zone.utilization" [ngClass]="zoneBarClass(zone.utilization)"></div></div>
+                    <span>{{ zone.utilization }}%</span>
+                  </div>
+                </td>
+                <td>{{ zone.bins }}</td>
+                <td><span class="status-badge" [ngClass]="statusClass(zone.status)">{{ zone.status }}</span></td>
+                <td><button class="action-link">View</button><button class="row-menu">•••</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Bins'">
+      <section class="panel table-panel">
+        <div class="panel-heading"><div><h2>Bin locations</h2><p>Individual storage bins across all zones</p></div><button class="button button-secondary button-sm">＋ <span>Add bin</span></button></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>BIN CODE</th><th>ZONE</th><th>CAPACITY</th><th>OCCUPIED</th><th>ITEMS</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let bin of binsData">
+                <td class="muted-code">{{ bin.code }}</td>
+                <td>{{ bin.zone }}</td>
+                <td>{{ bin.capacity }}</td>
+                <td><strong>{{ bin.occupied }}</strong></td>
+                <td>{{ bin.items }}</td>
+                <td><span class="status-badge" [ngClass]="statusClass(bin.status)">{{ bin.status }}</span></td>
+                <td><button class="action-link">View</button><button class="row-menu">•••</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Inventory'">
+      <section class="panel table-panel">
+        <div class="panel-heading"><div><h2>Warehouse inventory</h2><p>Stock items stored at this location</p></div><button class="button button-secondary button-sm">⇩ <span>Export</span></button></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>SKU</th><th>PRODUCT</th><th>ZONE</th><th>BIN</th><th>QUANTITY</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let inv of invData">
+                <td class="muted-code">{{ inv.sku }}</td>
+                <td><strong>{{ inv.product }}</strong></td>
+                <td>{{ inv.zone }}</td>
+                <td class="muted-code">{{ inv.bin }}</td>
+                <td><strong>{{ inv.quantity }}</strong></td>
+                <td><span class="status-badge" [ngClass]="statusClass(inv.status)">{{ inv.status }}</span></td>
+                <td><button class="action-link">View</button><button class="row-menu">•••</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Orders'">
+      <section class="panel table-panel">
+        <div class="panel-heading"><div><h2>Warehouse orders</h2><p>Recent orders fulfilled from this warehouse</p></div></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>ORDER ID</th><th>CUSTOMER</th><th>ITEMS</th><th>PRIORITY</th><th>ORDER DATE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let ord of ordData">
+                <td class="muted-code">{{ ord.id }}</td>
+                <td><strong>{{ ord.customer }}</strong></td>
+                <td>{{ ord.items }}</td>
+                <td><span class="status-badge" [ngClass]="priorityClass(ord.priority)">{{ ord.priority }}</span></td>
+                <td>{{ ord.date }}</td>
+                <td><span class="status-badge" [ngClass]="statusClass(ord.status)">{{ ord.status }}</span></td>
+                <td><button class="action-link">View</button><button class="row-menu">•••</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Activity'">
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Warehouse activity log</h2><p>Recent events at this facility</p></div></div>
+        <div class="activity-list">
+          <div class="activity-row"><span class="activity-icon green">✓</span><div><strong>Order ORD-10482 picked from zone B-12</strong><small>By Amit Sharma</small><time>2 min ago</time></div></div>
+          <div class="activity-row"><span class="activity-icon blue">⇥</span><div><strong>Inbound shipment SHP-2043 received</strong><small>6,120 units from Global Electronics</small><time>4 hrs ago</time></div></div>
+          <div class="activity-row"><span class="activity-icon orange">⌗</span><div><strong>Zone C utilization reached 74%</strong><small>Storage zone STR-B</small><time>6 hrs ago</time></div></div>
+          <div class="activity-row"><span class="activity-icon sky">↗</span><div><strong>SKU-10045 stock updated</strong><small>+180 units received via SHP-2043</small><time>4 hrs ago</time></div></div>
+        </div>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'Performance'">
+      <div class="overview-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><h2>Throughput trend</h2><p>Orders processed per day this week</p></div></div>
+          <div class="bar-chart">
+            <div class="y-axis"><span>500</span><span>250</span><span>0</span></div>
+            <div class="chart-area">
+              <div class="grid-line line-1"></div><div class="grid-line line-2"></div><div class="grid-line line-3"></div>
+              <div class="bars">
+                <div class="bar-group"><i class="bar blue" style="height:65%"></i><small>Mon</small></div>
+                <div class="bar-group"><i class="bar blue" style="height:78%"></i><small>Tue</small></div>
+                <div class="bar-group"><i class="bar blue" style="height:72%"></i><small>Wed</small></div>
+                <div class="bar-group"><i class="bar blue" style="height:88%"></i><small>Thu</small></div>
+                <div class="bar-group"><i class="bar blue" style="height:82%"></i><small>Fri</small></div>
+                <div class="bar-group"><i class="bar blue" style="height:55%"></i><small>Sat</small></div>
+                <div class="bar-group current"><i class="bar blue" style="height:48%"></i><small>Sun</small></div>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading"><div><h2>Performance metrics</h2><p>This week vs last week</p></div></div>
+          <div class="perf-metrics">
+            <div class="perf-metric"><span>Picking accuracy</span><strong>98.4%</strong><small class="success-text">↑ 1.2% from last week</small></div>
+            <div class="perf-metric"><span>Avg pick time</span><strong>4.2 min</strong><small class="success-text">↓ 0.8 min from last week</small></div>
+            <div class="perf-metric"><span>Packing accuracy</span><strong>99.1%</strong><small class="success-text">↑ 0.3% from last week</small></div>
+            <div class="perf-metric"><span>On-time shipping</span><strong>94.8%</strong><small class="trend-down-text">↓ 2.1% from last week</small></div>
+            <div class="perf-metric"><span>Orders fulfilled</span><strong>2,846</strong><small class="success-text">↑ 8.6% from last week</small></div>
+          </div>
+        </article>
+      </div>
+    </ng-container>
+  </div>
+</ng-container>

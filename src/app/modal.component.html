@@ -1,0 +1,34 @@
+<div class="modal-overlay" *ngIf="open" (click)="handleOverlay($event)">
+  <div class="modal-dialog" [class.modal-sm]="size === 'sm'" [class.modal-lg]="size === 'lg'" [class.modal-confirm]="variant === 'confirm'">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <span class="modal-confirm-icon" *ngIf="variant === 'confirm'" [ngClass]="confirmTone">{{ confirmIcon() }}</span>
+        <div>
+          <h3 class="modal-title">{{ title }}</h3>
+          <p class="modal-subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+        </div>
+      </div>
+      <button class="modal-close" (click)="close.emit()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <ng-container *ngIf="variant === 'confirm'; else contentBody">
+        <p class="confirm-message">{{ message }}</p>
+        <div class="confirm-detail" [innerHTML]="detailHtml"></div>
+      </ng-container>
+      <ng-template #contentBody>
+        <ng-content></ng-content>
+      </ng-template>
+    </div>
+    <div class="modal-footer">
+      <button class="button button-secondary" (click)="close.emit()">{{ cancelLabel }}</button>
+      <ng-container *ngIf="variant === 'confirm'; else footerContent">
+        <button class="button" [ngClass]="confirmButtonClass()" (click)="confirm.emit()">
+          {{ confirmLabel }}
+        </button>
+      </ng-container>
+      <ng-template #footerContent>
+        <ng-content select="[modal-footer]"></ng-content>
+      </ng-template>
+    </div>
+  </div>
+</div>

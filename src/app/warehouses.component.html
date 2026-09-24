@@ -1,0 +1,85 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">FACILITIES <span>•</span> WMS360</div>
+    <h1>Warehouses</h1>
+    <p>Manage facilities, capacity, zones and warehouse teams.</p>
+  </div>
+  <div class="page-actions">
+    <button class="button button-secondary">⇩ <span>Export</span></button>
+    <button class="button button-primary" (click)="showAddModal = true">＋ <span>Add warehouse</span></button>
+  </div>
+</section>
+
+<section class="warehouse-stats">
+  <div class="module-kpi"><span class="module-kpi-icon navy">▦</span><div><strong>{{ warehouses.length }}</strong><small>Total warehouses</small></div></div>
+  <div class="module-kpi"><span class="module-kpi-icon green">✓</span><div><strong>{{ activeCount() }}</strong><small>Active facilities</small></div></div>
+  <div class="module-kpi"><span class="module-kpi-icon orange">⌗</span><div><strong>{{ avgUtilization() }}%</strong><small>Avg utilization</small></div></div>
+  <div class="module-kpi"><span class="module-kpi-icon red">△</span><div><strong>{{ atCapacityCount() }}</strong><small>At capacity</small></div></div>
+</section>
+
+<section class="panel table-panel module-table">
+  <div class="table-controls">
+    <div class="table-search"><span>⌕</span><input placeholder="Search warehouses..." [value]="searchQuery" (input)="onSearchInput($event)" /></div>
+    <div class="table-filter-row">
+      <button class="filter-chip">All cities ⌄</button>
+      <button class="filter-chip">All status ⌄</button>
+    </div>
+    <span class="results-count">{{ filteredWarehouses().length }} of {{ warehouses.length }} facilities</span>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>WAREHOUSE CODE</th><th>WAREHOUSE NAME</th><th>CITY</th><th>MANAGER</th><th>CAPACITY</th><th>UTILIZATION</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let wh of filteredWarehouses()">
+          <td class="muted-code">{{ wh.code }}</td>
+          <td>
+            <div class="warehouse-cell"><span class="warehouse-thumb">{{ wh.city.charAt(0) }}</span><strong>{{ wh.name }}</strong></div>
+          </td>
+          <td>{{ wh.city }}</td>
+          <td>{{ wh.manager }}</td>
+          <td>{{ wh.capacity }}</td>
+          <td>
+            <div class="util-cell">
+              <div class="util-bar-track"><div class="util-bar-fill" [style.width.%]="wh.utilization" [ngClass]="utilBarClass(wh.utilization)"></div></div>
+              <span>{{ wh.utilization }}%</span>
+            </div>
+          </td>
+          <td><span class="status-badge" [ngClass]="statusClass(wh.status)">{{ wh.status }}</span></td>
+          <td>
+            <button class="action-link" (click)="viewWarehouse(wh.code)">View</button>
+            <button class="action-link">Edit</button>
+            <button class="row-menu">•••</button>
+          </td>
+        </tr>
+        <tr class="empty-row" *ngIf="filteredWarehouses().length === 0">
+          <td [attr.colspan]="8"><div class="empty-state"><span class="empty-icon">▱</span><strong>No warehouses found</strong><small>Try adjusting your search or filters</small></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <span>Rows per page <b>20⌄</b></span>
+    <span>1–{{ filteredWarehouses().length }} of {{ filteredWarehouses().length }}</span>
+    <button disabled>‹</button><button class="selected-page">1</button><button>›</button>
+  </div>
+</section>
+
+<div class="modal-overlay" *ngIf="showAddModal" (click)="showAddModal = false">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header"><div><h3 class="modal-title">Add new warehouse</h3><p class="modal-subtitle">Create a new facility in your network</p></div><button class="modal-close" (click)="showAddModal = false">×</button></div>
+    <div class="modal-body">
+      <div class="modal-form-grid">
+        <div class="form-group"><label>Warehouse Code <span class="req">*</span></label><input class="settings-input" placeholder="e.g. WH-MUM-002" /></div>
+        <div class="form-group"><label>Warehouse Name <span class="req">*</span></label><input class="settings-input" placeholder="e.g. Mumbai Central Warehouse" /></div>
+        <div class="form-group"><label>City <span class="req">*</span></label><input class="settings-input" placeholder="e.g. Mumbai" /></div>
+        <div class="form-group"><label>Manager <span class="req">*</span></label><input class="settings-input" placeholder="e.g. Rajesh Kumar" /></div>
+        <div class="form-group"><label>Capacity (m²) <span class="req">*</span></label><input class="settings-input" type="number" placeholder="e.g. 50000" /></div>
+        <div class="form-group"><label>Time Zone</label><div class="settings-select"><span>Asia/Kolkata (IST)</span><span class="settings-select-arrow">⌄</span></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="button button-secondary" (click)="showAddModal = false">Cancel</button>
+      <button class="button button-primary" (click)="showAddModal = false">✓ <span>Create warehouse</span></button>
+    </div>
+  </div>
+</div>

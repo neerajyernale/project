@@ -1,0 +1,108 @@
+<div *ngIf="!loggedIn; else appShell">
+  <app-login></app-login>
+</div>
+
+<ng-template #appShell>
+  <div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand-lockup">
+        <div class="brand-mark"><span></span><span></span><span></span></div>
+        <div class="brand-copy"><strong>WMS<span>360</span></strong><small>Warehouse operations</small></div>
+      </div>
+      <div class="workspace-switcher">
+        <div class="warehouse-dot"></div>
+        <div><small>ACTIVE WAREHOUSE</small><strong>Mumbai Central</strong></div>
+        <span class="chevron">⌄</span>
+      </div>
+      <nav class="nav-list">
+        <p class="nav-caption">WORKSPACE</p>
+        <button *ngFor="let item of primaryNav" class="nav-item" [class.active]="activePage === item.label" (click)="navigate(item.label)" [attr.aria-label]="item.label">
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-count" *ngIf="item.badge">{{ item.badge }}</span>
+        </button>
+        <p class="nav-caption secondary-caption">MANAGE</p>
+        <button *ngFor="let item of manageNav" class="nav-item" [class.active]="activePage === item.label" (click)="navigate(item.label)" [attr.aria-label]="item.label">
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <span class="status-pulse"></span>
+          <div><strong>All systems operational</strong><small>Last synced just now</small></div>
+        </div>
+        <button class="collapse-button" (click)="toggleSidebar()">
+          <span>{{ sidebarCollapsed ? '›' : '‹' }}</span>
+          <span class="nav-label">Collapse sidebar</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand">
+          <div class="brand-mark"><span></span><span></span><span></span></div>
+          <strong>WMS<span>360</span></strong>
+        </div>
+        <div class="global-search">
+          <span>⌕</span>
+          <input aria-label="Global search" placeholder="Search products, orders, warehouses..." />
+          <kbd>⌘ K</kbd>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button help-button" aria-label="Help">?</button>
+          <button class="icon-button notification-button" aria-label="Notifications" (click)="toggleNotifications()">
+            ◔<span></span>
+          </button>
+          <div class="profile-wrap">
+            <button class="profile-button" (click)="toggleProfile()">
+              <div class="avatar">AR</div>
+              <div class="profile-text"><strong>Admin User</strong><small>Administrator</small></div>
+              <span class="chevron">⌄</span>
+            </button>
+            <div class="popover profile-menu" *ngIf="profileOpen">
+              <strong>Admin User</strong>
+              <small>admin@wms360.com</small>
+              <hr />
+              <button (click)="navigate('Settings')">My profile</button>
+              <button (click)="navigate('Settings')">Preferences</button>
+              <button>Change password</button>
+              <button (click)="logout()">Sign out</button>
+            </div>
+          </div>
+        </div>
+        <div class="popover notification-popover" *ngIf="notificationsOpen">
+          <div class="popover-heading">
+            <strong>Notifications</strong>
+            <button (click)="closeNotifications()">×</button>
+          </div>
+          <div class="notification-item" *ngFor="let n of notifications">
+            <span class="alert-dot" [ngClass]="n.tone"></span>
+            <div><strong>{{ n.title }}</strong><small>{{ n.detail }}</small><time>{{ n.time }}</time></div>
+          </div>
+          <div class="notification-footer"><button>View all notifications →</button></div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <ng-container [ngSwitch]="activePage">
+          <app-dashboard *ngSwitchCase="'Dashboard'"></app-dashboard>
+          <ng-container *ngSwitchCase="'Warehouses'">
+            <app-warehouse-detail *ngIf="detailWarehouseCode; else warehousesList"></app-warehouse-detail>
+            <ng-template #warehousesList><app-warehouses></app-warehouses></ng-template>
+          </ng-container>
+          <app-reports *ngSwitchCase="'Reports'"></app-reports>
+          <app-users-roles *ngSwitchCase="'Users & Roles'"></app-users-roles>
+          <app-settings *ngSwitchCase="'Settings'"></app-settings>
+          <app-module-table *ngSwitchDefault
+            [pageTitle]="activePage"
+            [description]="getDescription()"
+            [pageKey]="activePage"
+            [showKpis]="showModuleKpis()">
+          </app-module-table>
+        </ng-container>
+      </div>
+    </main>
+  </div>
+</ng-template>
