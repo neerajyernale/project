@@ -32,6 +32,11 @@ writeFileSync(join(out, 'assets', 'config', 'mf.manifest.json'), JSON.stringify(
 // Static files are served first; any other path is an app route. /mfe and /assets stay 404 when
 // missing, so a missing remote shows "unavailable" instead of receiving index.html.
 const vercel = {
+  // Already built (on Node 16): Vercel must not install or build anything, whatever the project settings say.
+  framework: null,
+  installCommand: '',
+  buildCommand: '',
+  outputDirectory: '.',
   rewrites: [{ source: '/((?!mfe/|assets/).*)', destination: '/index.html' }],
   headers: [
     {

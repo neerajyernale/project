@@ -1,5 +1,6 @@
 import { ALL_PERMISSIONS, Role, Settings, TokenResponse, User } from '@wms/core';
 import { ApiException, DbUser, conflict, notFound, unauthorized } from '../mock-types';
+import { DEMO_PASSWORD } from '../mock-seed';
 import { Ctx, MockServer } from '../mock-server';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,7 +161,7 @@ export function registerAdminRoutes(s: MockServer): void {
         status: 'ACTIVE',
         lastLoginAt: null,
         // Mock only: invited users sign in with the demo password until email invites exist.
-        password: 'Wms360!demo',
+        password: DEMO_PASSWORD,
         version: 1,
       };
       s.db.users.push(user);
