@@ -3,14 +3,21 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, merge } from 'rxjs';
 import { map, skip, switchMap } from 'rxjs/operators';
 
-import { CatalogApi, InventoryApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { InventoryItem, MOVEMENT_TYPES, Movement, Transfer } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController, ResourceState, loadResource } from '@core/state/list-controller';
-import { downloadCsv } from '@shared/csv';
-import { ConfirmData, DialogService } from '@shared/ui/dialogs';
+import {
+  AuthSession,
+  CatalogApi,
+  InventoryApi,
+  InventoryItem,
+  ListController,
+  loadResource,
+  Movement,
+  MOVEMENT_TYPES,
+  ResourceState,
+  ToastService,
+  Transfer,
+  WarehouseContext,
+} from '@wms/core';
+import { ConfirmData, DialogService, downloadCsv } from '@wms/design-system';
 import { BalancesDialogComponent, TransferDialogComponent } from './inventory-dialogs';
 
 const INVENTORY_TABS = `
@@ -54,7 +61,7 @@ const INVENTORY_TABS = `
           </select>
           <select class="filter-select" aria-label="Category" [value]="list.filter('category')" (change)="list.setFilter('category', $any($event.target).value)">
             <option value="">All categories</option>
-            <option *ngFor="let c of categories$ | async" [value]="c">{{ c }}</option>
+            <option *ngFor="let c of categories$ | async" [value]="c" [selected]="c === list.filter('category')">{{ c }}</option>
           </select>
           <button *ngIf="list.hasFilters" type="button" class="link-btn" (click)="list.clear()">Clear</button>
           <span class="results-count" *ngIf="s.page">{{ s.page.totalElements }} stock lines</span>
@@ -295,12 +302,15 @@ export class TransfersComponent implements OnInit, OnDestroy {
     destroy$: this.destroy$,
   });
   readonly counts$ = merge(this.context.activeId$, this.changed$).pipe(
-    switchMap(() => this.api.transfers({ size: 200 })),
-    map((p) => {
-      const c: Record<Transfer['status'], number> = { REQUESTED: 0, APPROVED: 0, IN_TRANSIT: 0, COMPLETED: 0, REJECTED: 0, CANCELLED: 0 };
-      p.content.forEach((t) => c[t.status]++);
-      return c;
-    }),
+    switchMap(() => this.api.transferCounts()),
+    map(({ byStatus }): Record<Transfer['status'], number> => ({
+      REQUESTED: byStatus['REQUESTED'] ?? 0,
+      APPROVED: byStatus['APPROVED'] ?? 0,
+      IN_TRANSIT: byStatus['IN_TRANSIT'] ?? 0,
+      COMPLETED: byStatus['COMPLETED'] ?? 0,
+      REJECTED: byStatus['REJECTED'] ?? 0,
+      CANCELLED: byStatus['CANCELLED'] ?? 0,
+    })),
   );
 
   constructor(
@@ -371,8 +381,13 @@ const STEPS: Transfer['status'][] = ['REQUESTED', 'APPROVED', 'IN_TRANSIT', 'COM
             <span class="step-dot"><wms-icon *ngIf="stepIndex(t) > i" name="check" [size]="12"></wms-icon></span>{{ st | humanize }}
           </li>
         </ol>
+        <div class="inline-alert info" *ngIf="waitingOn(t) as note"><wms-icon name="clock"></wms-icon><span>{{ note }}</span></div>
         <div class="inline-alert danger" *ngIf="t.status === 'REJECTED'"><wms-icon name="ban"></wms-icon><span>Rejected{{ t.note ? ': ' + t.note : '' }}</span></div>
         <div class="inline-alert warning" *ngIf="t.status === 'CANCELLED'"><wms-icon name="ban"></wms-icon><span>Cancelled. Any reserved stock was released.</span></div>
+        <div class="inline-alert info" *ngIf="t.status === 'COMPLETED'">
+          <wms-icon name="info"></wms-icon>
+          <span>Received into the dock at {{ t.destWarehouseName }}. Move it to storage or picking bins (Inventory → bins → Move) to make it available for orders.</span>
+        </div>
 
         <section class="panel">
           <div class="panel-heading"><div><h2>Products</h2><p>{{ t.totalQty | number }} units in {{ t.lines.length }} line{{ t.lines.length === 1 ? '' : 's' }}</p></div></div>
@@ -409,13 +424,36 @@ export class TransferDetailComponent {
     switchMap(() => loadResource(this.api.transfer(this.route.snapshot.paramMap.get('id') ?? ''))),
   );
 
-  constructor(private readonly api: InventoryApi, private readonly route: ActivatedRoute, private readonly dialogs: DialogService, private readonly toasts: ToastService) {}
+  constructor(
+    private readonly api: InventoryApi,
+    private readonly route: ActivatedRoute,
+    private readonly dialogs: DialogService,
+    private readonly toasts: ToastService,
+    private readonly session: AuthSession,
+  ) {}
 
   stepIndex(t: Transfer): number {
     return STEPS.indexOf(t.status) + (t.status === 'COMPLETED' ? 1 : 0);
   }
 
+  /** The source works the transfer until dispatch; only the destination receives it. */
   actionsFor(t: Transfer): TransferAction[] {
+    const scope = this.session.warehouseScope;
+    const atSource = !scope.length || scope.includes(t.sourceWarehouseId);
+    const atDest = !scope.length || scope.includes(t.destWarehouseId);
+    return this.byStatus(t).filter((a) => (a.command === 'receive' ? atDest : atSource));
+  }
+
+  /** Whose move it is, for the note under the header. */
+  waitingOn(t: Transfer): string | null {
+    const scope = this.session.warehouseScope;
+    if (!scope.length) return null;
+    if (['REQUESTED', 'APPROVED'].includes(t.status) && !scope.includes(t.sourceWarehouseId)) return `Waiting for ${t.sourceWarehouseName} to ${t.status === 'REQUESTED' ? 'approve' : 'dispatch'}.`;
+    if (t.status === 'IN_TRANSIT' && !scope.includes(t.destWarehouseId)) return `In transit. ${t.destWarehouseName} will receive it.`;
+    return null;
+  }
+
+  private byStatus(t: Transfer): TransferAction[] {
     const route = `${t.sourceWarehouseName} → ${t.destWarehouseName}`;
     switch (t.status) {
       case 'REQUESTED':

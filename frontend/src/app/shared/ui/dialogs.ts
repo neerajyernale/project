@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, Injectab
 import { FormControl, Validators } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 
-import { errorMessage } from '@core/api/api-error';
+import { errorMessage } from '@wms/core';
 
 /**
  * Opens dialogs through the CDK (focus trap, Escape to close, restored focus, aria-modal).

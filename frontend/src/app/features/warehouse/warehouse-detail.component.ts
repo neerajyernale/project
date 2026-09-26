@@ -3,12 +3,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable, Subject, combineLatest } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap } from 'rxjs/operators';
 
-import { WarehouseApi } from '@core/api/domain-apis';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Warehouse, Zone } from '@core/models';
-import { ResourceState, loadResource } from '@core/state/list-controller';
-import { ToastService } from '@core/notify/toast.service';
-import { DialogService } from '@shared/ui/dialogs';
+import { loadResource, ResourceState, ToastService, Warehouse, WarehouseApi, WarehouseContext, Zone } from '@wms/core';
+import { DialogService } from '@wms/design-system';
 import { WarehouseFormDialogComponent } from './warehouse-dialogs';
 
 /** One warehouse + its zones, shared by the detail page and its tab routes. */
@@ -91,7 +87,9 @@ export class WarehouseDetailStore {
         </section>
 
         <nav class="tabs" aria-label="Warehouse sections">
-          <a *ngFor="let t of tabs" [routerLink]="t.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ t.label }}</a>
+          <ng-container *ngFor="let t of tabs">
+            <a *wmsCan="t.permission" [routerLink]="t.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ t.label }}</a>
+          </ng-container>
         </nav>
         <router-outlet></router-outlet>
       </ng-container>
@@ -100,13 +98,13 @@ export class WarehouseDetailStore {
 })
 export class WarehouseDetailComponent {
   readonly tabs = [
-    { label: 'Overview', path: 'overview' },
-    { label: 'Zones', path: 'zones' },
-    { label: 'Bins', path: 'bins' },
-    { label: 'Inventory', path: 'inventory' },
-    { label: 'Orders', path: 'orders' },
-    { label: 'Activity', path: 'activity' },
-    { label: 'Performance', path: 'performance' },
+    { label: 'Overview', path: 'overview', permission: 'warehouses:view' },
+    { label: 'Zones', path: 'zones', permission: 'warehouses:view' },
+    { label: 'Bins', path: 'bins', permission: 'warehouses:view' },
+    { label: 'Inventory', path: 'inventory', permission: 'inventory:view' },
+    { label: 'Orders', path: 'orders', permission: 'orders:view' },
+    { label: 'Activity', path: 'activity', permission: 'warehouses:view' },
+    { label: 'Performance', path: 'performance', permission: 'dashboard:view' },
   ];
 
   constructor(

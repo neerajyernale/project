@@ -1,14 +1,14 @@
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, throwError, timer } from 'rxjs';
 import { catchError, retry, switchMap } from 'rxjs/operators';
 
-import { ApiError, toApiError } from '@core/api/api-error';
-import { AuthSession, SKIP_AUTH } from '@core/auth/auth-session.service';
-import { AppConfigService } from '@core/config/app-config.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { uuid } from '@core/util/ids';
+import { ApiError, toApiError } from '../api/api-error';
+import { AuthSession, SKIP_AUTH } from '../auth/auth-session.service';
+import { AppConfigService } from '../config/app-config.service';
+import { WarehouseContext } from '../context/warehouse-context.service';
+import { uuid } from '../util/ids';
 
 /*
  * The HTTP pipeline, in order (ARCHITECTURE §3.4):
@@ -74,10 +74,16 @@ export class WarehouseContextInterceptor implements HttpInterceptor {
   }
 }
 
-/** 4. Retries idempotent GETs on network/5xx (max 2, backoff), then maps errors to ApiError. */
+/**
+ * 4. Retries idempotent GETs on network/5xx (max 2, backoff), then maps errors to ApiError.
+ * A 403 usually means an administrator changed this user's role since sign-in, so the
+ * permissions are re-read (at most every 10 s) and the UI hides what is no longer allowed.
+ */
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
-  constructor(private readonly config: AppConfigService) {}
+  private lastPermissionRefresh = 0;
+
+  constructor(private readonly config: AppConfigService, private readonly injector: Injector) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (!isApi(req, this.config)) return next.handle(req);
@@ -88,7 +94,19 @@ export class ErrorInterceptor implements HttpInterceptor {
         count: req.method === 'GET' ? 2 : 0,
         delay: (e: unknown, attempt: number) => (retryable(e) ? timer(300 * 2 ** (attempt - 1)) : throwError(() => e)),
       }),
-      catchError((e: unknown) => throwError(() => toApiError(e, correlationId))),
+      catchError((e: unknown) => {
+        const err = toApiError(e, correlationId);
+        if (err.isForbidden && !req.url.endsWith('/auth/me')) this.refreshPermissions();
+        return throwError(() => err);
+      }),
     );
+  }
+
+  private refreshPermissions(): void {
+    if (Date.now() - this.lastPermissionRefresh < 10_000) return;
+    this.lastPermissionRefresh = Date.now();
+    // Resolved lazily: AuthSession depends on HttpClient, which depends on this interceptor.
+    const session = this.injector.get(AuthSession);
+    if (session.isAuthenticated) session.reloadUser().subscribe({ error: () => undefined });
   }
 }

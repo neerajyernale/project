@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { PermissionGuard } from '@core/auth/guards';
-import { SharedModule } from '@shared/shared.module';
+import { PermissionGuard } from '@wms/core';
+import { SharedModule } from '@wms/design-system';
 import { PartnerDialogComponent, ProductDialogComponent } from './catalog-dialogs';
 import { PartnersComponent } from './partners.component';
 import { ProductsComponent } from './products.component';

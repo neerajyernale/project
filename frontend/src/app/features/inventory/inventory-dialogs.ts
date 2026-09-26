@@ -2,17 +2,23 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 import { BehaviorSubject } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 
-import { CatalogApi, InventoryApi, ProductOption } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { ADJUSTMENT_REASONS, InventoryBalance, InventoryItem, Transfer } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { loadResource } from '@core/state/list-controller';
-import { DialogService } from '@shared/ui/dialogs';
-import { FormDialog } from '@shared/ui/form-dialog';
-import { LineForm, lineGroup } from '@shared/ui/line-items.component';
+import {
+  ADJUSTMENT_REASONS,
+  Bin,
+  CatalogApi,
+  InventoryApi,
+  InventoryBalance,
+  InventoryItem,
+  loadResource,
+  ProductOption,
+  ToastService,
+  Transfer,
+  WarehouseApi,
+  WarehouseContext,
+} from '@wms/core';
+import { DialogService, FormDialog, LineForm, lineGroup } from '@wms/design-system';
 
 // ------------------------------------------------------------------------------ stock by bin
 
@@ -38,7 +44,12 @@ import { LineForm, lineGroup } from '@shared/ui/line-items.component';
                 <td class="num">{{ b.reserved | number }}</td>
                 <td class="num">{{ b.damaged | number }}</td>
                 <td class="num"><strong>{{ b.available | number }}</strong></td>
-                <td><button *wmsCan="'inventory:edit'" type="button" class="link-btn" (click)="adjust(b)">Adjust</button></td>
+                <td>
+                  <div class="row-actions" *wmsCan="'inventory:edit'">
+                    <button type="button" class="link-btn" (click)="move(b)" [disabled]="!b.available">Move</button>
+                    <button type="button" class="link-btn" (click)="adjust(b)">Adjust</button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -66,6 +77,14 @@ export class BalancesDialogComponent {
     private readonly api: InventoryApi,
     private readonly dialogs: DialogService,
   ) {}
+
+  move(balance: InventoryBalance): void {
+    this.dialogs.open<InventoryBalance>(MoveDialogComponent, balance).subscribe((r) => {
+      if (!r) return;
+      this.changed = true;
+      this.reload$.next();
+    });
+  }
 
   adjust(balance: InventoryBalance): void {
     this.dialogs.open<InventoryBalance>(AdjustDialogComponent, balance).subscribe((r) => {
@@ -166,6 +185,81 @@ export class AdjustDialogComponent extends FormDialog<InventoryBalance> {
   }
 }
 
+// ------------------------------------------------------------------------------ move between bins
+
+@Component({
+  selector: 'wms-move-dialog',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <form class="dialog sm" [formGroup]="form" (ngSubmit)="save()" novalidate aria-labelledby="mv-title">
+      <div class="dialog-header">
+        <div><h2 id="mv-title">Move stock</h2><p>{{ b.sku }} · from bin {{ b.binCode }} ({{ b.zoneName }}) · {{ b.available | number }} available to move</p></div>
+        <button type="button" class="icon-close" (click)="ref.close()" aria-label="Close"><wms-icon name="x" [size]="18"></wms-icon></button>
+      </div>
+      <div class="dialog-body">
+        <div class="inline-alert danger" *ngIf="banner" role="alert"><wms-icon name="alert-circle"></wms-icon><span>{{ banner }}</span></div>
+        <div class="inline-alert info" *ngIf="b.zoneName === 'Receiving'"><wms-icon name="info"></wms-icon><span>Stock in the dock can't be allocated to orders until it is moved to a storage or picking bin.</span></div>
+        <div class="form-grid">
+          <div class="field full">
+            <label for="mv-bin">To bin <span class="req">*</span></label>
+            <select id="mv-bin" class="select" formControlName="toBinId">
+              <option value="" disabled>{{ bins ? 'Choose a bin…' : 'Loading bins…' }}</option>
+              <option *ngFor="let x of bins" [value]="x.id">{{ x.code }} · {{ x.zoneName }} · {{ x.capacityUnits - x.usedUnits | number }} free</option>
+            </select>
+            <wms-field-error [control]="form.controls.toBinId" label="Bin"></wms-field-error>
+          </div>
+          <div class="field">
+            <label for="mv-qty">Units <span class="req">*</span></label>
+            <input id="mv-qty" class="input num" type="number" min="1" [max]="b.available" formControlName="qty" />
+            <wms-field-error [control]="form.controls.qty" label="Units"></wms-field-error>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" (click)="ref.close()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="busy || !b.available">{{ busy ? 'Moving…' : 'Move stock' }}</button>
+      </div>
+    </form>
+  `,
+})
+export class MoveDialogComponent extends FormDialog<InventoryBalance> {
+  bins: Bin[] | null = null;
+  readonly form = new FormGroup({
+    toBinId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    qty: new FormControl(this.b.available, { nonNullable: true, validators: [Validators.required, Validators.min(1), Validators.max(this.b.available), Validators.pattern(/^\d+$/)] }),
+  });
+
+  constructor(
+    @Inject(DIALOG_DATA) readonly b: InventoryBalance,
+    private readonly api: InventoryApi,
+    warehouses: WarehouseApi,
+    ref: DialogRef<InventoryBalance>,
+    cdr: ChangeDetectorRef,
+    toasts: ToastService,
+  ) {
+    super(cdr, toasts, ref);
+    warehouses.bins(b.warehouseId, { size: 200, sort: 'code,asc' }).subscribe({
+      next: (p) => {
+        // Storage and picking first: that is where stock becomes allocatable.
+        const rank = (x: Bin) => (x.zoneType === 'PICKING' ? 0 : x.zoneType === 'STORAGE' ? 1 : 2);
+        this.bins = p.content.filter((x) => !x.blocked && x.id !== b.binId).sort((x, y) => rank(x) - rank(y) || x.code.localeCompare(y.code));
+        cdr.markForCheck();
+      },
+      error: () => {
+        this.bins = [];
+        this.banner = 'Bins could not be loaded. You need access to warehouse layouts to move stock.';
+        cdr.markForCheck();
+      },
+    });
+  }
+
+  save(): void {
+    const v = this.form.getRawValue();
+    const to = this.bins?.find((x) => x.id === v.toBinId);
+    this.submit(this.api.move({ balanceId: this.b.id, toBinId: v.toBinId, qty: Number(v.qty) }), `${v.qty} units moved to ${to?.code ?? 'bin'}`);
+  }
+}
+
 // ------------------------------------------------------------------------------ transfer
 
 @Component({
@@ -215,9 +309,10 @@ export class AdjustDialogComponent extends FormDialog<InventoryBalance> {
 })
 export class TransferDialogComponent extends FormDialog<Transfer> {
   products: ProductOption[] = [];
-  readonly allWarehouses$ = this.context.activeOptions$;
+  /** Any active warehouse can receive stock, even ones outside the user's own scope. */
+  readonly allWarehouses$ = this.warehouseApi.networkOptions();
   /** Scoped users can only send stock from their own warehouses. */
-  readonly sources$ = this.allWarehouses$.pipe(map((all) => (this.session.warehouseScope.length ? all.filter((w) => this.session.warehouseScope.includes(w.id)) : all)));
+  readonly sources$ = this.context.activeOptions$;
   readonly form = new FormGroup({
     sourceWarehouseId: new FormControl(this.context.activeId ?? '', { nonNullable: true, validators: [Validators.required] }),
     destWarehouseId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -229,7 +324,7 @@ export class TransferDialogComponent extends FormDialog<Transfer> {
     private readonly api: InventoryApi,
     catalog: CatalogApi,
     private readonly context: WarehouseContext,
-    private readonly session: AuthSession,
+    private readonly warehouseApi: WarehouseApi,
     ref: DialogRef<Transfer>,
     cdr: ChangeDetectorRef,
     toasts: ToastService,

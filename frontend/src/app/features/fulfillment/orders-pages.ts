@@ -3,13 +3,18 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, merge } from 'rxjs';
 import { map, skip, switchMap } from 'rxjs/operators';
 
-import { FulfillmentApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { ORDER_STATUSES, Order, PRIORITIES } from '@core/models';
-import { ListController, ResourceState, loadResource } from '@core/state/list-controller';
-import { downloadCsv } from '@shared/csv';
-import { DialogService } from '@shared/ui/dialogs';
+import {
+  AuthSession,
+  FulfillmentApi,
+  ListController,
+  loadResource,
+  Order,
+  ORDER_STATUSES,
+  PRIORITIES,
+  ResourceState,
+  WarehouseContext,
+} from '@wms/core';
+import { DialogService, downloadCsv } from '@wms/design-system';
 import { OrderDialogComponent } from './fulfillment-dialogs';
 import { OrderAction, OrderActions } from './order-actions.service';
 
@@ -39,20 +44,20 @@ export class OrdersComponent implements OnInit, OnDestroy {
     destroy$: this.destroy$,
   });
 
-  /** Counts for the KPI strip (the real API would expose a counts endpoint). */
+  /** Exact counts for the KPI strip, from the counts endpoint. */
   readonly counts$ = merge(this.context.activeId$, this.changed$).pipe(
-    switchMap(() => this.api.orders({ size: 200, stage: this.outbound ? 'outbound' : undefined })),
-    map((p) => {
-      const by = (st: Order['status']) => p.content.filter((o) => o.status === st).length;
+    switchMap(() => this.api.orderCounts(this.outbound ? 'outbound' : undefined)),
+    map((c) => {
+      const by = (st: Order['status']) => c.byStatus[st] ?? 0;
       return {
         created: by('CREATED'),
         allocated: by('ALLOCATED'),
         picking: by('PICKING'),
         picked: by('PICKED'),
         packed: by('PACKED'),
-        inFlight: p.content.filter((o) => ['ALLOCATED', 'PICKING', 'PICKED', 'PACKED'].includes(o.status)).length,
-        delayed: p.content.filter((o) => o.delayed).length,
-        shipped: p.content.filter((o) => o.status === 'SHIPPED' || o.status === 'DELIVERED').length,
+        inFlight: by('ALLOCATED') + by('PICKING') + by('PICKED') + by('PACKED'),
+        delayed: c.delayed,
+        shipped: by('SHIPPED') + by('DELIVERED'),
       };
     }),
   );
@@ -134,7 +139,16 @@ export class OrderDetailComponent {
     switchMap(() => loadResource(this.api.order(this.route.snapshot.paramMap.get('id') ?? ''))),
   );
 
-  constructor(private readonly api: FulfillmentApi, private readonly route: ActivatedRoute, readonly actions: OrderActions) {}
+  constructor(
+    private readonly api: FulfillmentApi,
+    private readonly route: ActivatedRoute,
+    private readonly session: AuthSession,
+    readonly actions: OrderActions,
+  ) {}
+
+  can(p: string): boolean {
+    return this.session.can(p);
+  }
 
   stepIndex(o: Order): number {
     const i = STEPS.indexOf(o.status);

@@ -1,0 +1,10 @@
+{
+  "dashboard": "http://localhost:4201/remoteEntry.js",
+  "warehouse": "http://localhost:4202/remoteEntry.js",
+  "catalog": "http://localhost:4203/remoteEntry.js",
+  "inventory": "http://localhost:4204/remoteEntry.js",
+  "inbound": "http://localhost:4205/remoteEntry.js",
+  "fulfillment": "http://localhost:4206/remoteEntry.js",
+  "reports": "http://localhost:4207/remoteEntry.js",
+  "admin": "http://localhost:4208/remoteEntry.js"
+}

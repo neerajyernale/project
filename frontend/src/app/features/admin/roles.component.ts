@@ -1,12 +1,17 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
-import { errorMessage } from '@core/api/api-error';
-import { AdminApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { PERMISSION_ACTIONS, PERMISSION_MODULES, PermissionAction, Role } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { DialogService } from '@shared/ui/dialogs';
+import {
+  AdminApi,
+  AuthSession,
+  errorMessage,
+  PERMISSION_ACTIONS,
+  PERMISSION_MODULES,
+  PermissionAction,
+  Role,
+  ToastService,
+} from '@wms/core';
+import { DialogService } from '@wms/design-system';
 import { ADMIN_TABS } from './users.component';
 
 /**
@@ -104,6 +109,7 @@ import { ADMIN_TABS } from './users.component';
       .role-item small { font-size: 11px; color: var(--wms-text-faint); font-weight: 400; }
       .role-item:hover { background: var(--wms-surface-muted); }
       .role-item.active { background: var(--wms-primary-soft); color: var(--wms-primary); }
+      .role-item.active small { color: var(--wms-primary-text); }
       .matrix-area { flex: 1; min-width: 0; padding: 18px 22px; }
       .matrix-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
       .meta-fields { display: grid; grid-template-columns: 220px minmax(220px, 1fr); gap: 12px; flex: 1; }
@@ -194,6 +200,9 @@ export class RolesComponent implements OnInit {
     this.selected = r;
     this.draft = new Set(r.permissions);
     this.meta.reset({ name: r.name, description: r.description });
+    // Read-only for people who can view roles but not change them.
+    if (this.canEdit) this.meta.enable();
+    else this.meta.disable();
     this.banner = '';
     this.cdr.markForCheck();
   }

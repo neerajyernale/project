@@ -3,16 +3,10 @@ import { ChangeDetectionStrategy, Component, Inject, NgModule } from '@angular/c
 import { FormControl, FormGroup } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
-import { map, startWith, switchMap } from 'rxjs/operators';
+import { map, shareReplay, startWith, switchMap } from 'rxjs/operators';
 
-import { InsightsApi } from '@core/api/domain-apis';
-import { PermissionGuard } from '@core/auth/guards';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { ReportDefinition, ReportResult } from '@core/models';
-import { loadResource } from '@core/state/list-controller';
-import { downloadCsv } from '@shared/csv';
-import { SharedModule } from '@shared/shared.module';
-import { DialogService } from '@shared/ui/dialogs';
+import { InsightsApi, loadResource, PermissionGuard, ReportDefinition, ReportResult, WarehouseContext } from '@wms/core';
+import { DialogService, downloadCsv, SharedModule } from '@wms/design-system';
 
 const CATEGORY_ICONS: Record<ReportDefinition['category'], string> = {
   Inventory: 'inventory',
@@ -66,7 +60,8 @@ interface RunRequest {
   styles: ['.report { width: 1000px; }', '.meta { font-size: 11px; color: var(--wms-text-subtle); margin-bottom: 10px; }'],
 })
 export class ReportPreviewComponent {
-  readonly state$ = loadResource(this.api.runReport(this.req.def.key, this.req.filters));
+  /** Shared: the body and the footer both read it, and the report must run once. */
+  readonly state$ = loadResource(this.api.runReport(this.req.def.key, this.req.filters)).pipe(shareReplay({ bufferSize: 1, refCount: true }));
 
   constructor(@Inject(DIALOG_DATA) readonly req: RunRequest, readonly ref: DialogRef<boolean>, private readonly api: InsightsApi) {}
 

@@ -3,8 +3,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { Observable } from 'rxjs';
 
-import { applyServerErrors } from '@core/api/api-error';
-import { ToastService } from '@core/notify/toast.service';
+import { applyServerErrors, ToastService } from '@wms/core';
 
 /**
  * Submit flow shared by every form dialog: validate → call → toast → close with the result,

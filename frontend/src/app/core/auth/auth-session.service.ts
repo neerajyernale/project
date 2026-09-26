@@ -3,8 +3,8 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 
-import { AppConfigService } from '@core/config/app-config.service';
-import { LoginRequest, SessionUser, TokenResponse } from '@core/models';
+import { AppConfigService } from '../config/app-config.service';
+import { LoginRequest, SessionUser, TokenResponse } from '../models';
 
 /** Requests marked with this skip the auth interceptor (login/refresh/logout themselves). */
 export const SKIP_AUTH = new HttpContextToken<boolean>(() => false);

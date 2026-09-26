@@ -2,10 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { errorMessage } from '@core/api/api-error';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { AppConfigService } from '@core/config/app-config.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
+import { AppConfigService, AuthSession, errorMessage, WarehouseContext } from '@wms/core';
 
 interface DemoAccount {
   email: string;
@@ -38,6 +35,8 @@ export class LoginComponent {
     { email: 'priya.menon@wms360.com', role: 'Inventory Manager · Pune' },
     { email: 'rohit.verma@wms360.com', role: 'Picker · Mumbai' },
     { email: 'sneha.iyer@wms360.com', role: 'Packer · Mumbai' },
+    { email: 'meera.joshi@wms360.com', role: 'Seller · all warehouses' },
+    { email: 'vivek.nair@wms360.com', role: 'Viewer · read only' },
   ];
 
   constructor(
@@ -67,7 +66,7 @@ export class LoginComponent {
         await this.context.load();
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         // Only same-app paths: never redirect to another origin.
-        const safe = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : '/dashboard';
+        const safe = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : '/';
         void this.router.navigateByUrl(safe);
       },
       error: (e: unknown) => {

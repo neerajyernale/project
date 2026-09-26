@@ -1,4 +1,4 @@
-import { Tone } from '@core/models';
+import { Tone } from '@wms/core';
 
 /**
  * Explicit status → tone map, replacing the prototype's substring matching

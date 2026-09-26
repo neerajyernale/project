@@ -5,8 +5,8 @@ module.exports = {
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/src'],
   moduleNameMapper: {
-    '^@core/(.*)$': '<rootDir>/src/app/core/$1',
-    '^@shared/(.*)$': '<rootDir>/src/app/shared/$1',
+    '^@wms/core$': '<rootDir>/src/app/core/index.ts',
+    '^@wms/design-system$': '<rootDir>/src/app/shared/index.ts',
     '^@env/(.*)$': '<rootDir>/src/environments/$1',
   },
   globals: {

@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { PermissionGuard } from '@core/auth/guards';
-import { SharedModule } from '@shared/shared.module';
+import { PermissionGuard } from '@wms/core';
+import { SharedModule } from '@wms/design-system';
 import { BinDialogComponent, WarehouseFormDialogComponent, ZoneDialogComponent } from './warehouse-dialogs';
 import { WarehouseDetailComponent } from './warehouse-detail.component';
 import { WarehouseListComponent } from './warehouse-list.component';

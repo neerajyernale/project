@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, defer, from, of, throwError, timer } from 'rxjs';
 import { mergeMap, shareReplay } from 'rxjs/operators';
 
-import { AppConfigService } from '@core/config/app-config.service';
+import { AppConfigService } from '@wms/core';
 import type { MockServer } from './mock-server';
 
 /**

@@ -43,7 +43,7 @@ import {
   WarehouseUpsert,
   Zone,
   ZoneUpsert,
-} from '@core/models';
+} from '../models';
 import { ApiClient, QueryParams } from './api-client';
 
 export interface ProductOption {
@@ -65,6 +65,23 @@ export interface StaffOption {
   name: string;
 }
 
+export interface StatusCounts {
+  byStatus: Record<string, number>;
+}
+
+export interface OrderCounts extends StatusCounts {
+  total: number;
+  delayed: number;
+}
+
+export interface WarehouseOptionDto {
+  id: string;
+  code: string;
+  name: string;
+  city: string;
+  status: Warehouse['status'];
+}
+
 @Injectable({ providedIn: 'root' })
 export class WarehouseApi {
   constructor(private readonly api: ApiClient) {}
@@ -74,6 +91,10 @@ export class WarehouseApi {
   }
   get(id: string): Observable<Warehouse> {
     return this.api.get(`/warehouses/${id}`);
+  }
+  /** Every active warehouse in the network (names only), e.g. for transfer destinations. */
+  networkOptions(): Observable<WarehouseOptionDto[]> {
+    return this.api.get('/warehouses/options', { scope: 'network' });
   }
   create(body: WarehouseUpsert): Observable<Warehouse> {
     return this.api.post('/warehouses', body);
@@ -170,6 +191,13 @@ export class InventoryApi {
   adjust(body: AdjustmentRequest): Observable<InventoryBalance> {
     return this.api.post('/inventory/adjustments', body, { idempotent: true });
   }
+  /** Bin-to-bin move within a warehouse (putaway from the dock, re-slotting). */
+  move(body: { balanceId: string; toBinId: string; qty: number }): Observable<InventoryBalance> {
+    return this.api.post('/inventory/moves', body, { idempotent: true });
+  }
+  transferCounts(): Observable<StatusCounts> {
+    return this.api.get('/transfers/counts');
+  }
 
   transfers(q: QueryParams): Observable<Page<Transfer>> {
     return this.api.get('/transfers', q);
@@ -210,6 +238,9 @@ export class InboundApi {
   cancel(id: string): Observable<Inbound> {
     return this.api.post(`/inbound/${id}/cancel`);
   }
+  counts(): Observable<StatusCounts> {
+    return this.api.get('/inbound/counts');
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -221,6 +252,12 @@ export class FulfillmentApi {
   }
   order(id: string): Observable<Order> {
     return this.api.get(`/orders/${id}`);
+  }
+  orderCounts(stage?: 'outbound'): Observable<OrderCounts> {
+    return this.api.get('/orders/counts', { stage });
+  }
+  pickCounts(): Observable<StatusCounts> {
+    return this.api.get('/pick-tasks/counts');
   }
   createOrder(body: OrderCreate): Observable<Order> {
     return this.api.post('/orders', body);
@@ -303,8 +340,9 @@ export class AdminApi {
   users(q: QueryParams): Observable<Page<User>> {
     return this.api.get('/users', q);
   }
-  staff(role: string, warehouseId?: string): Observable<StaffOption[]> {
-    return this.api.get('/users/staff', { role, warehouseId });
+  /** Active people who hold `permission` and work in `warehouseId`. */
+  staff(permission: string, warehouseId?: string): Observable<StaffOption[]> {
+    return this.api.get('/users/staff', { permission, warehouseId });
   }
   createUser(body: UserUpsert): Observable<User> {
     return this.api.post('/users', body);

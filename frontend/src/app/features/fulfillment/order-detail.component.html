@@ -33,11 +33,12 @@
       <div class="stat"><span>Priority</span><wms-status [value]="o.priority"></wms-status></div>
       <div class="stat"><span>Created</span><strong>{{ o.createdAt | wmsDate: 'datetime' }}</strong></div>
       <div class="stat"><span>Required by</span><strong>{{ o.requiredBy | wmsDate }}</strong></div>
-      <div class="stat"><span>Pick task</span><strong><a *ngIf="o.pickTaskNumber; else dash" routerLink="/picking" [queryParams]="{ q: o.pickTaskNumber }" class="code">{{ o.pickTaskNumber }}</a></strong></div>
+      <div class="stat"><span>Pick task</span><strong><a *ngIf="o.pickTaskNumber && can('picking:view'); else pickText" routerLink="/picking" [queryParams]="{ q: o.pickTaskNumber }" class="code">{{ o.pickTaskNumber }}</a></strong></div>
+      <ng-template #pickText><span class="code">{{ o.pickTaskNumber || '—' }}</span></ng-template>
       <div class="stat"><span>Package</span><strong class="code">{{ o.packageNumber || '—' }}</strong></div>
-      <div class="stat"><span>Shipment</span><strong><a *ngIf="o.shipmentNumber; else dash" routerLink="/shipping" [queryParams]="{ q: o.shipmentNumber }" class="code">{{ o.shipmentNumber }}</a></strong></div>
+      <div class="stat"><span>Shipment</span><strong><a *ngIf="o.shipmentNumber && can('shipping:view'); else shipText" routerLink="/shipping" [queryParams]="{ q: o.shipmentNumber }" class="code">{{ o.shipmentNumber }}</a></strong></div>
+      <ng-template #shipText><span class="code">{{ o.shipmentNumber || '—' }}</span></ng-template>
     </section>
-    <ng-template #dash>—</ng-template>
 
     <section class="panel">
       <div class="panel-heading"><div><h2>Lines</h2><p>{{ o.totalQty | number }} units ordered</p></div></div>

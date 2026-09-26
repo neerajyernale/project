@@ -3,13 +3,19 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, merge } from 'rxjs';
 import { map, skip, switchMap } from 'rxjs/operators';
 
-import { FulfillmentApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { CARRIERS, Order, PackageRecord, PickTask, Shipment } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController } from '@core/state/list-controller';
-import { DialogService } from '@shared/ui/dialogs';
+import {
+  AuthSession,
+  CARRIERS,
+  FulfillmentApi,
+  ListController,
+  Order,
+  PackageRecord,
+  PickTask,
+  Shipment,
+  ToastService,
+  WarehouseContext,
+} from '@wms/core';
+import { DialogService } from '@wms/design-system';
 import { AssignDialogComponent, PickDialogComponent } from './fulfillment-dialogs';
 import { OrderActions } from './order-actions.service';
 
@@ -93,12 +99,14 @@ export class PickingComponent implements OnDestroy {
     destroy$: this.destroy$,
   });
   readonly counts$ = merge(this.context.activeId$, this.changed$).pipe(
-    switchMap(() => this.api.pickTasks({ size: 200 })),
-    map((p) => {
-      const c: Record<PickTask['status'], number> = { PENDING: 0, ASSIGNED: 0, IN_PROGRESS: 0, COMPLETED: 0, SHORT: 0 };
-      p.content.forEach((t) => c[t.status]++);
-      return c;
-    }),
+    switchMap(() => this.api.pickCounts()),
+    map(({ byStatus }): Record<PickTask['status'], number> => ({
+      PENDING: byStatus['PENDING'] ?? 0,
+      ASSIGNED: byStatus['ASSIGNED'] ?? 0,
+      IN_PROGRESS: byStatus['IN_PROGRESS'] ?? 0,
+      COMPLETED: byStatus['COMPLETED'] ?? 0,
+      SHORT: byStatus['SHORT'] ?? 0,
+    })),
   );
 
   constructor(

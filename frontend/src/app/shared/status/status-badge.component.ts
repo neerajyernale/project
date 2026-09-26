@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { Tone } from '@core/models';
+import { Tone } from '@wms/core';
 import { humanize, toneOf } from './status-tones';
 
 /** Status pill. Colour is never the only signal: the label is always shown. */

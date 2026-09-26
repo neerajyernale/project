@@ -2,8 +2,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { AppConfigService } from '@core/config/app-config.service';
-import { uuid } from '@core/util/ids';
+import { AppConfigService } from '../config/app-config.service';
+import { uuid } from '../util/ids';
 
 export type QueryParams = Record<string, string | number | boolean | null | undefined>;
 

@@ -3,15 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { WarehouseApi } from '@core/api/domain-apis';
-import { errorMessage } from '@core/api/api-error';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Warehouse } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController } from '@core/state/list-controller';
-import { DialogService } from '@shared/ui/dialogs';
-import { downloadCsv } from '@shared/csv';
+import { AuthSession, errorMessage, ListController, ToastService, Warehouse, WarehouseApi, WarehouseContext } from '@wms/core';
+import { DialogService, downloadCsv } from '@wms/design-system';
 import { WarehouseFormDialogComponent } from './warehouse-dialogs';
 
 @Component({

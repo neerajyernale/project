@@ -3,13 +3,8 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { CanDeactivate } from '@angular/router';
 import { Observable, map, of } from 'rxjs';
 
-import { applyServerErrors, toApiError } from '@core/api/api-error';
-import { AdminApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Settings } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { DialogService } from '@shared/ui/dialogs';
+import { AdminApi, applyServerErrors, AuthSession, Settings, toApiError, ToastService, WarehouseContext } from '@wms/core';
+import { DialogService } from '@wms/design-system';
 
 type Section = 'general' | 'operations' | 'notifications' | 'security';
 

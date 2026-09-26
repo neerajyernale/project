@@ -129,7 +129,9 @@ The shell provides `HttpClient` and its interceptors once, at the root injector.
 | mfe-reports | 4207 |
 | mfe-admin | 4208 |
 
-`npm run dev` starts the shell and any remotes you list; the local manifest points unlisted remotes at the shared DEV environment, so you do not have to run all nine processes.
+`npm start` starts the shell and all remotes, or the shell and the remotes you list (`npm start -- inventory admin`); unlisted remotes show as unavailable. Once a shared DEV environment exists, the local manifest can point unlisted remotes at it. Remote dev servers run with live reload off: their reload client, loaded into the shell page, would reload the whole app each time a remote loads.
+
+Implementation notes (built 2026-09-26): the shell uses its own loader (`src/app/federation/remote-loader.ts`) because `loadRemoteModule()` in module-federation-runtime 14.3.14 does not await the container's `init()`; the shared list is written against webpack's `ModuleFederationPlugin` directly (`frontend/federation.webpack.js`) because the `withModuleFederationPlugin()` helper overwrites the singleton settings of path-mapped libraries.
 
 ## 9. Rollout order
 

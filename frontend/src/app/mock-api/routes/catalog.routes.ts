@@ -1,4 +1,4 @@
-import { Customer, PartnerStatus, Product, Supplier } from '@core/models';
+import { Customer, PartnerStatus, Product, Supplier } from '@wms/core';
 import { ApiException, DbCustomer, DbProduct, DbSupplier, conflict, notFound } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 

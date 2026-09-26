@@ -1,0 +1,10 @@
+[
+  { "name": "dashboard", "port": 4201, "roots": ["dashboard"], "module": "DashboardModule", "exposes": "src/app/features/dashboard/dashboard.module.ts" },
+  { "name": "warehouse", "port": 4202, "roots": ["warehouses"], "module": "WarehouseModule", "exposes": "src/app/features/warehouse/warehouse.module.ts" },
+  { "name": "catalog", "port": 4203, "roots": ["products", "suppliers", "customers"], "module": "CatalogModule", "exposes": "src/app/features/catalog/catalog.module.ts" },
+  { "name": "inventory", "port": 4204, "roots": ["inventory", "transfers"], "module": "InventoryModule", "exposes": "src/app/features/inventory/inventory.module.ts" },
+  { "name": "inbound", "port": 4205, "roots": ["inbound"], "module": "InboundModule", "exposes": "src/app/features/inbound/inbound.module.ts" },
+  { "name": "fulfillment", "port": 4206, "roots": ["orders", "outbound", "picking", "packing", "shipping"], "module": "FulfillmentModule", "exposes": "src/app/features/fulfillment/fulfillment.module.ts" },
+  { "name": "reports", "port": 4207, "roots": ["reports"], "module": "ReportsModule", "exposes": "src/app/features/reports/reports.module.ts" },
+  { "name": "admin", "port": 4208, "roots": ["admin", "settings"], "module": "AdminModule", "exposes": "src/app/features/admin/admin.module.ts" }
+]

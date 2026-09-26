@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormGroup } from '@angular/forms';
-import { FieldError, ProblemDetail } from '@core/models';
+import { FieldError, ProblemDetail } from '../models';
 
 /** The one error type features see. Built from RFC 7807 problem details by the error interceptor. */
 export class ApiError extends Error {

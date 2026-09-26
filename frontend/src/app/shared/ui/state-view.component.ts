@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { ApiError } from '@core/api/api-error';
-import { ViewStatus } from '@core/state/list-controller';
+import { ApiError, ViewStatus } from '@wms/core';
 
 /**
  * Renders every non-ready page state (ARCHITECTURE §3.3) so no page can forget one:

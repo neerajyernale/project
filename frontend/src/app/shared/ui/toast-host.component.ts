@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Toast, ToastService } from '@core/notify/toast.service';
+import { Toast, ToastService } from '@wms/core';
 
 @Component({
   selector: 'wms-toast-host',

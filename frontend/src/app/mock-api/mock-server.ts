@@ -1,19 +1,12 @@
-import {
-  ActivityEntry,
-  FieldError,
-  MovementType,
-  Page,
-  SessionUser,
-  StockStatus,
-  Tone,
-  ZoneType,
-} from '@core/models';
+import { ActivityEntry, FieldError, MovementType, Page, SessionUser, StockStatus, Tone, ZoneType } from '@wms/core';
 import {
   ApiException,
   Db,
   DbBalance,
   DbBin,
+  DbNotification,
   DbProduct,
+  DbSession,
   DbUser,
   MockResponse,
   Reservation,
@@ -65,6 +58,8 @@ export interface RouteOptions {
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TTL_MS = 8 * 60 * 60 * 1000;
 const REFRESH_TTL_REMEMBER_MS = 7 * 24 * 60 * 60 * 1000;
+const REFRESH_GRACE_MS = 10 * 1000;
+const MAX_IDEMPOTENCY_KEYS = 500;
 const PICKABLE_ZONES: ZoneType[] = ['PICKING', 'STORAGE'];
 
 /**
@@ -113,6 +108,8 @@ export class MockServer {
       if (req.method !== 'GET') {
         if (idemKey && response.status < 300) {
           this.db.idempotency[idemKey] = response;
+          const keys = Object.keys(this.db.idempotency);
+          if (keys.length > MAX_IDEMPOTENCY_KEYS) keys.slice(0, keys.length - MAX_IDEMPOTENCY_KEYS).forEach((k) => delete this.db.idempotency[k]);
         }
         this.onChange(this.db);
       }
@@ -207,38 +204,75 @@ export class MockServer {
 
   // ---------------------------------------------------------------- auth
 
+  /** Sessions idle longer than the security setting are ended (server-side, not just in the UI). */
+  private idleLimitMs(): number {
+    return (this.db.settings.security.sessionTimeoutMin || 30) * 60 * 1000;
+  }
+
   authenticate(authorization: string | null): DbUser {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
     if (!token) throw unauthorized('Authentication is required.');
     const session = this.db.sessions.find((s) => s.accessToken === token);
     if (!session || session.accessExpiresAt < Date.now()) throw unauthorized();
+    if (Date.now() - session.lastSeenAt > this.idleLimitMs()) {
+      this.db.sessions = this.db.sessions.filter((s) => s !== session);
+      throw unauthorized(`You were signed out after ${this.db.settings.security.sessionTimeoutMin} minutes of inactivity.`);
+    }
     const user = this.db.users.find((u) => u.id === session.userId);
     if (!user || user.status !== 'ACTIVE') throw unauthorized('Your account is not active.');
+    session.lastSeenAt = Date.now();
     return user;
   }
 
   openSession(user: DbUser, rememberMe: boolean): { accessToken: string; refreshToken: string; expiresIn: number } {
-    const session = {
+    const now = Date.now();
+    const session: DbSession = {
       userId: user.id,
       refreshToken: this.token(),
-      refreshExpiresAt: Date.now() + (rememberMe ? REFRESH_TTL_REMEMBER_MS : REFRESH_TTL_MS),
+      refreshExpiresAt: now + (rememberMe ? REFRESH_TTL_REMEMBER_MS : REFRESH_TTL_MS),
       accessToken: this.token(),
-      accessExpiresAt: Date.now() + ACCESS_TTL_MS,
+      accessExpiresAt: now + ACCESS_TTL_MS,
+      previousRefreshToken: null,
+      rotatedAt: now,
+      usedRefreshTokens: [],
+      lastSeenAt: now,
     };
-    this.db.sessions = this.db.sessions.filter((s) => s.refreshExpiresAt > Date.now());
+    this.db.sessions = this.db.sessions.filter((s) => s.refreshExpiresAt > now);
     this.db.sessions.push(session);
     return { accessToken: session.accessToken, refreshToken: session.refreshToken, expiresIn: ACCESS_TTL_MS / 1000 };
   }
 
-  /** Rotates the refresh token on every use; an unknown token ends nothing but fails. */
+  /**
+   * Rotates the refresh token on every use (ADR-006). Presenting a token that was already
+   * rotated away means it leaked: the whole session is revoked. The token replaced in the last
+   * few seconds is still accepted, so two tabs refreshing at the same moment don't sign out.
+   */
   rotateSession(refreshToken: string): { user: DbUser; accessToken: string; refreshToken: string; expiresIn: number } {
-    const session = this.db.sessions.find((s) => s.refreshToken === refreshToken);
-    if (!session || session.refreshExpiresAt < Date.now()) throw unauthorized();
+    const now = Date.now();
+    const reused = this.db.sessions.find(
+      (s) => s.usedRefreshTokens.includes(refreshToken) && !(s.previousRefreshToken === refreshToken && now - s.rotatedAt < REFRESH_GRACE_MS),
+    );
+    if (reused) {
+      this.db.sessions = this.db.sessions.filter((s) => s !== reused);
+      throw unauthorized('This session was ended for your security. Sign in again.');
+    }
+    const session = this.db.sessions.find((s) => s.refreshToken === refreshToken || (s.previousRefreshToken === refreshToken && now - s.rotatedAt < REFRESH_GRACE_MS));
+    if (!session || session.refreshExpiresAt < now) throw unauthorized();
+    if (now - session.lastSeenAt > this.idleLimitMs()) {
+      this.db.sessions = this.db.sessions.filter((s) => s !== session);
+      throw unauthorized(`You were signed out after ${this.db.settings.security.sessionTimeoutMin} minutes of inactivity.`);
+    }
     const user = this.db.users.find((u) => u.id === session.userId);
     if (!user || user.status !== 'ACTIVE') throw unauthorized('Your account is not active.');
-    session.refreshToken = this.token();
+    if (session.refreshToken === refreshToken) {
+      session.usedRefreshTokens = [...session.usedRefreshTokens.slice(-20), refreshToken];
+      session.previousRefreshToken = refreshToken;
+      session.rotatedAt = now;
+      session.refreshToken = this.token();
+    }
     session.accessToken = this.token();
-    session.accessExpiresAt = Date.now() + ACCESS_TTL_MS;
+    session.accessExpiresAt = now + ACCESS_TTL_MS;
+    session.lastSeenAt = now;
     return { user, accessToken: session.accessToken, refreshToken: session.refreshToken, expiresIn: ACCESS_TTL_MS / 1000 };
   }
 
@@ -411,7 +445,7 @@ export class MockServer {
 
   /** The receiving bin with the most free space. */
   receivingBin(warehouseId: string): DbBin {
-    const zoneIds = new Set(this.db.zones.filter((z) => z.warehouseId === warehouseId && z.type === 'RECEIVING').map((z) => z.id));
+    const zoneIds = new Set(this.db.zones.filter((z) => z.warehouseId === warehouseId && z.type === 'RECEIVING' && z.status === 'ACTIVE').map((z) => z.id));
     const bins = this.db.bins.filter((b) => zoneIds.has(b.zoneId) && !b.blocked);
     if (!bins.length) throw conflict('This warehouse has no receiving bin. Add one under Warehouses → Bins.');
     return bins.sort((a, b) => this.binUsed(a.id) - a.capacityUnits - (this.binUsed(b.id) - b.capacityUnits))[0];
@@ -440,7 +474,7 @@ export class MockServer {
       .filter((b) => {
         const bin = this.bin(b.binId);
         const zone = this.zoneOf(bin);
-        return !bin.blocked && !!zone && PICKABLE_ZONES.includes(zone.type);
+        return this.binInUse(bin) && !!zone && PICKABLE_ZONES.includes(zone.type);
       })
       .sort((a, b) => {
         const za = this.zoneOf(this.bin(a.binId))?.type === 'PICKING' ? 0 : 1;
@@ -498,7 +532,10 @@ export class MockServer {
   }
 
   moveStock(from: DbBalance, toBinId: string, qty: number, ref: string, user: string): void {
-    if (this.available(from) < qty) throw conflict('Not enough available stock in the source bin.');
+    const target = this.bin(toBinId);
+    if (target.warehouseId !== from.warehouseId) throw conflict('Stock can only move between bins of the same warehouse.');
+    if (!this.binInUse(target)) throw conflict(`Bin ${target.code} is blocked or its zone is inactive.`);
+    if (this.available(from) < qty) throw conflict(`Only ${this.available(from)} units are available to move from this bin.`);
     const to = this.balanceFor(from.warehouseId, toBinId, from.productId);
     from.onHand -= qty;
     to.onHand += qty;
@@ -573,21 +610,80 @@ export class MockServer {
     if (this.db.activity.length > 500) this.db.activity.length = 500;
   }
 
-  notify(tone: Tone, title: string, detail: string, link: string | null, setting?: keyof Db['settings']['notifications']): void {
-    if (setting && !this.db.settings.notifications[setting]) return;
-    this.db.notifications.unshift({ id: this.nextId('ntf'), at: this.nowIso(), tone, title, detail, link, read: false, userId: null });
-    if (this.db.notifications.length > 100) this.db.notifications.length = 100;
+  /**
+   * Adds a notification for the people it concerns: those who can see `warehouseId` and hold
+   * `permission`. Read state is tracked per user.
+   */
+  notify(
+    tone: Tone,
+    title: string,
+    detail: string,
+    link: string | null,
+    opts: { setting?: keyof Db['settings']['notifications']; warehouseId?: string | null; permission?: string | null } = {},
+  ): void {
+    if (opts.setting && !this.db.settings.notifications[opts.setting]) return;
+    const n: DbNotification = {
+      id: this.nextId('ntf'),
+      at: this.nowIso(),
+      tone,
+      title,
+      detail,
+      link,
+      warehouseId: opts.warehouseId ?? null,
+      permission: opts.permission ?? null,
+      readBy: [],
+    };
+    this.db.notifications.unshift(n);
+    if (this.db.notifications.length > 200) this.db.notifications.length = 200;
   }
 
-  /** Raise a low-stock notification the first time a product crosses its reorder level in a warehouse. */
+  /** Notifications a user may see: their warehouses and their permissions. */
+  notificationsFor(user: DbUser): DbNotification[] {
+    const allowed = this.allowedWarehouses(user);
+    const perms = new Set(this.permissionsOf(user));
+    return this.db.notifications.filter(
+      (n) => (!n.warehouseId || !allowed || allowed.has(n.warehouseId)) && (!n.permission || perms.has(n.permission)),
+    );
+  }
+
+  /** Whether a similar notification was raised recently, so repeated events don't flood the bell. */
+  private recentlyNotified(key: { title: string; link: string | null; warehouseId: string | null }, withinMs = 12 * 60 * 60 * 1000): boolean {
+    const since = this.now().getTime() - withinMs;
+    return this.db.notifications.some(
+      (n) => n.title === key.title && n.link === key.link && n.warehouseId === key.warehouseId && Date.parse(n.at) >= since,
+    );
+  }
+
+  /** Low-stock alert when a product reaches its reorder level in a warehouse (at most twice a day). */
   checkLowStock(warehouseId: string, productId: string): void {
     const p = this.product(productId);
     const t = this.productTotals(productId, (id) => id === warehouseId);
     if (t.available > p.reorderLevel) return;
     const title = t.available <= 0 ? 'Out of stock' : 'Low stock alert';
+    const link = `/inventory?q=${p.sku}`;
+    if (this.recentlyNotified({ title, link, warehouseId })) return;
     const detail = `${p.sku} ${p.name} · ${t.available} available in ${this.warehouse(warehouseId).name}`;
-    const recent = this.db.notifications.find((n) => n.detail === detail && n.title === title);
-    if (!recent) this.notify(t.available <= 0 ? 'danger' : 'warning', title, detail, `/inventory?q=${p.sku}`, 'lowStock');
+    this.notify(t.available <= 0 ? 'danger' : 'warning', title, detail, link, { setting: 'lowStock', warehouseId, permission: 'inventory:view' });
+  }
+
+  /** Capacity warning when a warehouse's bins pass the configured threshold. */
+  checkCapacity(warehouseId: string): void {
+    const bins = this.db.bins.filter((b) => b.warehouseId === warehouseId);
+    const cap = bins.reduce((a, b) => a + b.capacityUnits, 0);
+    const used = bins.reduce((a, b) => a + this.binUsed(b.id), 0);
+    const pct = cap ? Math.round((used / cap) * 100) : 0;
+    const threshold = this.db.settings.operations.capacityAlertPct;
+    if (pct < threshold) return;
+    const w = this.warehouse(warehouseId);
+    const title = 'Warehouse capacity warning';
+    const link = `/warehouses/${w.id}`;
+    if (this.recentlyNotified({ title, link, warehouseId })) return;
+    this.notify('warning', title, `${w.name} at ${pct}% (alert at ${threshold}%)`, link, { setting: 'capacity', warehouseId, permission: 'warehouses:view' });
+  }
+
+  /** A bin can hold or give stock only if it and its zone are in use. */
+  binInUse(bin: DbBin): boolean {
+    return !bin.blocked && this.zoneOf(bin)?.status === 'ACTIVE';
   }
 
   actor(ctx: Ctx): string {

@@ -91,6 +91,19 @@ a:hover {
   font-size: var(--wms-text-md);
 }
 
+/* Printing a report prints the report dialog only, not the app behind it. */
+@media print {
+  body:has(.cdk-dialog-container) wms-shell,
+  body:has(.cdk-dialog-container) wms-toast-host,
+  .cdk-overlay-backdrop,
+  .dialog-footer,
+  .icon-close { display: none !important; }
+  .cdk-overlay-container, .cdk-global-overlay-wrapper, .cdk-overlay-pane { position: static !important; display: block !important; }
+  .dialog { box-shadow: none !important; max-height: none !important; width: 100% !important; }
+  .dialog-body { overflow: visible !important; }
+  .table-scroll { overflow: visible !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

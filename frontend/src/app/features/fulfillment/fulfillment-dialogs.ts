@@ -2,13 +2,24 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
 
-import { errorMessage } from '@core/api/api-error';
-import { AdminApi, CatalogApi, FulfillmentApi, PartnerOption, ProductOption, StaffOption } from '@core/api/domain-apis';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { CARRIERS, Order, PACK_STATIONS, PRIORITIES, PickTask, Priority } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { FormDialog } from '@shared/ui/form-dialog';
-import { LineForm, lineGroup } from '@shared/ui/line-items.component';
+import {
+  AdminApi,
+  CARRIERS,
+  CatalogApi,
+  errorMessage,
+  FulfillmentApi,
+  Order,
+  PACK_STATIONS,
+  PartnerOption,
+  PickTask,
+  PRIORITIES,
+  Priority,
+  ProductOption,
+  StaffOption,
+  ToastService,
+  WarehouseContext,
+} from '@wms/core';
+import { FormDialog, LineForm, lineGroup } from '@wms/design-system';
 
 // ------------------------------------------------------------------------------ new order
 
@@ -130,7 +141,7 @@ export class OrderDialogComponent extends FormDialog<Order> {
             <option value="" disabled>Choose…</option>
             <option *ngFor="let p of staff" [value]="p.name">{{ p.name }}</option>
           </select>
-          <small class="field-hint">People who can work in {{ task.warehouseName }}.</small>
+          <small class="field-hint">People allowed to pick in {{ task.warehouseName }}.</small>
           <wms-field-error [control]="form.controls.picker" label="Picker"></wms-field-error>
         </div>
       </div>
@@ -154,7 +165,8 @@ export class AssignDialogComponent extends FormDialog<PickTask> {
     toasts: ToastService,
   ) {
     super(cdr, toasts, ref);
-    admin.staff('', task.warehouseId).subscribe((s) => ((this.staff = s), cdr.markForCheck()));
+    // Only people allowed to pick who work in this warehouse.
+    admin.staff('picking:edit', task.warehouseId).subscribe((s) => ((this.staff = s), cdr.markForCheck()));
   }
 
   save(): void {

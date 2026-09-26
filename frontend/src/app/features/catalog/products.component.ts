@@ -3,14 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { skip } from 'rxjs/operators';
 
-import { CatalogApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Product } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController } from '@core/state/list-controller';
-import { downloadCsv } from '@shared/csv';
-import { DialogService } from '@shared/ui/dialogs';
+import { AuthSession, CatalogApi, ListController, Product, ToastService, WarehouseContext } from '@wms/core';
+import { DialogService, downloadCsv } from '@wms/design-system';
 import { ProductDialogComponent } from './catalog-dialogs';
 
 @Component({
@@ -37,7 +31,7 @@ import { ProductDialogComponent } from './catalog-dialogs';
           </label>
           <select class="filter-select" aria-label="Category" [value]="list.filter('category')" (change)="list.setFilter('category', $any($event.target).value)">
             <option value="">All categories</option>
-            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            <option *ngFor="let c of categories" [value]="c" [selected]="c === list.filter('category')">{{ c }}</option>
           </select>
           <select class="filter-select" aria-label="Stock" [value]="list.filter('stockStatus')" (change)="list.setFilter('stockStatus', $any($event.target).value)">
             <option value="">Any stock level</option>

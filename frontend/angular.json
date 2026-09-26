@@ -9,21 +9,27 @@
     "shell": {
       "projectType": "application",
       "schematics": {
-        "@schematics/angular:component": { "changeDetection": "OnPush", "style": "css" }
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
       },
       "root": "",
       "sourceRoot": "src",
       "prefix": "wms",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "ngx-build-plus:browser",
           "options": {
             "outputPath": "dist/shell",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.svg", "src/assets"],
+            "assets": [
+              "src/favicon.svg",
+              "src/assets"
+            ],
             "styles": [
               "node_modules/@fontsource/dm-sans/400.css",
               "node_modules/@fontsource/dm-sans/500.css",
@@ -34,16 +40,28 @@
               "src/styles/base.css",
               "src/styles/components.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "extraWebpackConfig": "webpack.config.js"
           },
           "configurations": {
             "production": {
               "budgets": [
-                { "type": "initial", "maximumWarning": "600kb", "maximumError": "1mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "6kb", "maximumError": "10kb" }
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
               ],
               "fileReplacements": [
-                { "replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts" }
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
               ],
               "outputHashing": "all"
             },
@@ -59,10 +77,842 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
+          "builder": "ngx-build-plus:dev-server",
           "configurations": {
-            "production": { "browserTarget": "shell:build:production" },
-            "development": { "browserTarget": "shell:build:development" }
+            "production": {
+              "browserTarget": "shell:build:production"
+            },
+            "development": {
+              "browserTarget": "shell:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4200,
+            "extraWebpackConfig": "webpack.config.js"
+          }
+        }
+      }
+    },
+    "mfe-dashboard": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-dashboard",
+      "sourceRoot": "projects/mfe-dashboard/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-dashboard",
+            "index": "src/index.html",
+            "main": "projects/mfe-dashboard/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-dashboard/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-dashboard/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4201,
+            "extraWebpackConfig": "projects/mfe-dashboard/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-dashboard:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-dashboard:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-warehouse": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-warehouse",
+      "sourceRoot": "projects/mfe-warehouse/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-warehouse",
+            "index": "src/index.html",
+            "main": "projects/mfe-warehouse/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-warehouse/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-warehouse/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4202,
+            "extraWebpackConfig": "projects/mfe-warehouse/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-warehouse:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-warehouse:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-catalog": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-catalog",
+      "sourceRoot": "projects/mfe-catalog/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-catalog",
+            "index": "src/index.html",
+            "main": "projects/mfe-catalog/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-catalog/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-catalog/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4203,
+            "extraWebpackConfig": "projects/mfe-catalog/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-catalog:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-catalog:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-inventory": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-inventory",
+      "sourceRoot": "projects/mfe-inventory/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-inventory",
+            "index": "src/index.html",
+            "main": "projects/mfe-inventory/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-inventory/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-inventory/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4204,
+            "extraWebpackConfig": "projects/mfe-inventory/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-inventory:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-inventory:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-inbound": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-inbound",
+      "sourceRoot": "projects/mfe-inbound/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-inbound",
+            "index": "src/index.html",
+            "main": "projects/mfe-inbound/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-inbound/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-inbound/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4205,
+            "extraWebpackConfig": "projects/mfe-inbound/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-inbound:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-inbound:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-fulfillment": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-fulfillment",
+      "sourceRoot": "projects/mfe-fulfillment/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-fulfillment",
+            "index": "src/index.html",
+            "main": "projects/mfe-fulfillment/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-fulfillment/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-fulfillment/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4206,
+            "extraWebpackConfig": "projects/mfe-fulfillment/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-fulfillment:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-fulfillment:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-reports": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-reports",
+      "sourceRoot": "projects/mfe-reports/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-reports",
+            "index": "src/index.html",
+            "main": "projects/mfe-reports/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-reports/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-reports/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4207,
+            "extraWebpackConfig": "projects/mfe-reports/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-reports:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-reports:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "mfe-admin": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "changeDetection": "OnPush",
+          "style": "css"
+        }
+      },
+      "root": "projects/mfe-admin",
+      "sourceRoot": "projects/mfe-admin/src",
+      "prefix": "wms",
+      "architect": {
+        "build": {
+          "builder": "ngx-build-plus:browser",
+          "options": {
+            "outputPath": "dist/mfe-admin",
+            "index": "src/index.html",
+            "main": "projects/mfe-admin/src/main.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "projects/mfe-admin/tsconfig.app.json",
+            "assets": [
+              {
+                "input": "src",
+                "glob": "favicon.svg",
+                "output": "/"
+              },
+              {
+                "input": "src/assets",
+                "ignore": [
+                  "config/mf.manifest.json"
+                ],
+                "glob": "**/*",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/dm-sans/400.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@angular/cdk/overlay-prebuilt.css",
+              "src/styles/tokens.css",
+              "src/styles/base.css",
+              "src/styles/components.css"
+            ],
+            "scripts": [],
+            "extraWebpackConfig": "projects/mfe-admin/webpack.config.js"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "600kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kb",
+                  "maximumError": "10kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "ngx-build-plus:dev-server",
+          "options": {
+            "port": 4208,
+            "extraWebpackConfig": "projects/mfe-admin/webpack.config.js",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            },
+            "liveReload": false
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "mfe-admin:build:production"
+            },
+            "development": {
+              "browserTarget": "mfe-admin:build:development"
+            }
           },
           "defaultConfiguration": "development"
         }

@@ -9,7 +9,7 @@
   --wms-nav-border: rgba(255, 255, 255, 0.08);
   --wms-nav-text: #9eafc1;
   --wms-nav-text-strong: #f3f7fb;
-  --wms-nav-caption: #637b96;
+  --wms-nav-caption: #6b839d;
   --wms-nav-active: #1b66bd;
   --wms-nav-active-edge: #69b4ff;
   --wms-brand-accent: #50a1f3;
@@ -23,12 +23,15 @@
   --wms-border-strong: #d9e1ea;
   --wms-divider: #edf1f4;
 
-  /* Text */
+  /*
+   * Text. Every level used for text meets WCAG AA (4.5:1) on both --wms-surface and --wms-bg
+   * (checked by e2e/a11y.mjs), so the lighter levels differ by size and weight more than by colour.
+   */
   --wms-text: #16253a;
   --wms-text-body: #4c5d71;
-  --wms-text-muted: #728196;
-  --wms-text-subtle: #8895a4;
-  --wms-text-faint: #a0acb9;
+  --wms-text-muted: #637184;
+  --wms-text-subtle: #647283;
+  --wms-text-faint: #627285;
 
   /* Brand + semantic */
   --wms-primary: #176bd1;
@@ -48,16 +51,17 @@
   --wms-chart-track: #e4ebf3;
   --wms-chart-1: #287bd4;
 
-  --wms-success: #16855c;
+  /* Semantic text colours meet 4.5:1 on their -soft badge backgrounds. */
+  --wms-success: #157c56;
   --wms-success-soft: #e8f7f0;
-  --wms-warning: #b8620f;
+  --wms-warning: #a7590e;
   --wms-warning-soft: #fff3e4;
   --wms-warning-fill: #e8a453;
   --wms-danger: #c53b46;
   --wms-danger-soft: #fff0f0;
-  --wms-info: #3375b9;
+  --wms-info: #306faf;
   --wms-info-soft: #eaf2fb;
-  --wms-neutral: #64748b;
+  --wms-neutral: #5e6d82;
   --wms-neutral-soft: #edf0f4;
 
   --wms-focus-ring: 0 0 0 3px rgba(40, 123, 212, 0.28);

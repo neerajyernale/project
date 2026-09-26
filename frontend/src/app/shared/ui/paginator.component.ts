@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { Page } from '@core/models';
+import { Page } from '@wms/core';
 
 @Component({
   selector: 'wms-paginator',

@@ -2,10 +2,8 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
-import { CatalogApi } from '@core/api/domain-apis';
-import { Customer, PartnerStatus, Product, Supplier } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { FormDialog } from '@shared/ui/form-dialog';
+import { CatalogApi, Customer, PartnerStatus, Product, Supplier, ToastService } from '@wms/core';
+import { FormDialog } from '@wms/design-system';
 
 const UOMS = ['Each', 'Pair', 'Box', 'Roll', 'Pack', 'Kg', 'Litre'];
 

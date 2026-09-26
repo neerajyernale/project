@@ -1,9 +1,9 @@
 import { fakeAsync, tick } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 
-import { ApiError } from '@core/api/api-error';
-import { QueryParams } from '@core/api/api-client';
-import { Page } from '@core/models';
+import { ApiError } from '../api/api-error';
+import { QueryParams } from '../api/api-client';
+import { Page } from '../models';
 import { ListController, ListState } from './list-controller';
 
 const page = <T>(content: T[], total = content.length): Page<T> => ({ content, page: 0, size: 25, totalElements: total, totalPages: 1 });

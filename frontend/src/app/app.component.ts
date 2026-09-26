@@ -3,8 +3,7 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { filter, pairwise } from 'rxjs/operators';
 
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
+import { AuthSession, WarehouseContext } from '@wms/core';
 
 @Component({
   selector: 'wms-root',

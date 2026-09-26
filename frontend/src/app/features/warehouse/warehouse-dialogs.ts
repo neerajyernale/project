@@ -2,10 +2,8 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
-import { WarehouseApi } from '@core/api/domain-apis';
-import { Bin, Warehouse, ZONE_TYPES, Zone } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { FormDialog } from '@shared/ui/form-dialog';
+import { Bin, ToastService, Warehouse, WarehouseApi, Zone, ZONE_TYPES } from '@wms/core';
+import { FormDialog } from '@wms/design-system';
 
 const CODE_PATTERN = /^[A-Za-z0-9-]{3,20}$/;
 const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London'];

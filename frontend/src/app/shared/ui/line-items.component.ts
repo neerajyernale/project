@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
-import { ProductOption } from '@core/api/domain-apis';
+import { ProductOption } from '@wms/core';
 
 export type LineForm = FormGroup<{ productId: FormControl<string>; qty: FormControl<number> }>;
 

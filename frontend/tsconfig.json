@@ -20,9 +20,10 @@
     "lib": ["es2020", "dom"],
     "useDefineForClassFields": false,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "paths": {
-      "@core/*": ["src/app/core/*"],
-      "@shared/*": ["src/app/shared/*"],
+      "@wms/core": ["src/app/core/index.ts"],
+      "@wms/design-system": ["src/app/shared/index.ts"],
       "@env/*": ["src/environments/*"]
     }
   },

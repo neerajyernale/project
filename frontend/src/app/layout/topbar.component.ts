@@ -17,12 +17,8 @@ import { Router } from '@angular/router';
 import { Subject, merge, of, timer } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 
-import { applyServerErrors } from '@core/api/api-error';
-import { InsightsApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { Notification, SearchResult, SessionUser } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { DialogService } from '@shared/ui/dialogs';
+import { applyServerErrors, AuthSession, InsightsApi, Notification, SearchResult, SessionUser, ToastService } from '@wms/core';
+import { DialogService } from '@wms/design-system';
 
 const SEARCH_ICONS: Record<SearchResult['type'], string> = {
   product: 'product',
@@ -223,7 +219,7 @@ function matchPasswords(group: AbstractControl): ValidationErrors | null {
         <div class="field" style="margin-top: 14px">
           <label for="cp-new">New password</label>
           <input id="cp-new" class="input" type="password" formControlName="newPassword" autocomplete="new-password" />
-          <small class="field-hint">At least 12 characters.</small>
+          <small class="field-hint">Your organisation sets the minimum length (usually 12 characters).</small>
           <wms-field-error [control]="form.controls.newPassword" label="New password"></wms-field-error>
         </div>
         <div class="field" style="margin-top: 14px">
@@ -243,7 +239,8 @@ export class ChangePasswordDialogComponent {
   readonly form = new FormGroup(
     {
       currentPassword: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-      newPassword: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(12)] }),
+      // The organisation's minimum (a security setting) is enforced by the server; 8 is the floor here.
+      newPassword: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
       confirm: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     },
     { validators: matchPasswords },

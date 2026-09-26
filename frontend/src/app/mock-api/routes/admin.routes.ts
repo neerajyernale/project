@@ -1,4 +1,4 @@
-import { ALL_PERMISSIONS, Role, Settings, TokenResponse, User } from '@core/models';
+import { ALL_PERMISSIONS, Role, Settings, TokenResponse, User } from '@wms/core';
 import { ApiException, DbUser, conflict, notFound, unauthorized } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 
@@ -117,13 +117,15 @@ export function registerAdminRoutes(s: MockServer): void {
     { permission: 'users:view' },
   );
 
-  /** Lightweight list for pickers/packers assignment; available to anyone who can pick. */
+  /** People who can do a job in a warehouse (e.g. `?permission=picking:edit&warehouseId=wh-mum`), for assignment. */
   s.on('GET', '/users/staff', (ctx) => {
     const roleName = ctx.query.get('role');
+    const permission = ctx.query.get('permission');
     const warehouseId = ctx.query.get('warehouseId');
     return s.db.users
       .filter((u) => u.status === 'ACTIVE')
       .filter((u) => !roleName || s.db.roles.find((r) => r.id === u.roleId)?.name === roleName)
+      .filter((u) => !permission || s.permissionsOf(u).includes(permission))
       .filter((u) => !warehouseId || u.warehouseIds.length === 0 || u.warehouseIds.includes(warehouseId))
       .map((u) => ({ id: u.id, name: u.name }));
   });
@@ -295,18 +297,23 @@ export function registerAdminRoutes(s: MockServer): void {
 
   // ------------------------------------------------------------------ notifications
 
+  // Per user: only their warehouses and permissions; read state is theirs alone.
   s.on('GET', '/notifications', (ctx) => {
-    const list = s.db.notifications.filter((n) => n.userId === null || n.userId === ctx.user.id);
-    return { unread: list.filter((n) => !n.read).length, items: list.slice(0, 30).map(({ userId: _u, ...n }) => n) };
+    const list = s.notificationsFor(ctx.user);
+    const me = ctx.user.id;
+    return {
+      unread: list.filter((n) => !n.readBy.includes(me)).length,
+      items: list.slice(0, 30).map(({ readBy, warehouseId: _w, permission: _p, ...n }) => ({ ...n, read: readBy.includes(me) })),
+    };
   });
 
   s.on(
     'POST',
     '/notifications/:id/read',
     (ctx) => {
-      const n = s.db.notifications.find((x) => x.id === ctx.params['id']);
+      const n = s.notificationsFor(ctx.user).find((x) => x.id === ctx.params['id']);
       if (!n) throw notFound('Notification');
-      n.read = true;
+      if (!n.readBy.includes(ctx.user.id)) n.readBy.push(ctx.user.id);
       return undefined;
     },
     { status: 204 },
@@ -315,8 +322,8 @@ export function registerAdminRoutes(s: MockServer): void {
   s.on(
     'POST',
     '/notifications/read-all',
-    () => {
-      s.db.notifications.forEach((n) => (n.read = true));
+    (ctx) => {
+      s.notificationsFor(ctx.user).forEach((n) => !n.readBy.includes(ctx.user.id) && n.readBy.push(ctx.user.id));
       return undefined;
     },
     { status: 204 },

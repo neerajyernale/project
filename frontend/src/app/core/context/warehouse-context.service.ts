@@ -3,9 +3,9 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
-import { AuthSession } from '@core/auth/auth-session.service';
-import { AppConfigService } from '@core/config/app-config.service';
-import { WarehouseStatus } from '@core/models';
+import { AuthSession } from '../auth/auth-session.service';
+import { AppConfigService } from '../config/app-config.service';
+import { WarehouseStatus } from '../models';
 
 export interface WarehouseOption {
   id: string;

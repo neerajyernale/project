@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { PermissionGuard } from '@core/auth/guards';
-import { SharedModule } from '@shared/shared.module';
+import { PermissionGuard } from '@wms/core';
+import { SharedModule } from '@wms/design-system';
 import { RolesComponent } from './roles.component';
 import { SettingsComponent, UnsavedSettingsGuard } from './settings.component';
 import { UserDialogComponent, UsersComponent } from './users.component';

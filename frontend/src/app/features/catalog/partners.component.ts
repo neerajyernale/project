@@ -2,12 +2,8 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
-import { CatalogApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { Customer, Page, Supplier } from '@core/models';
-import { ListController } from '@core/state/list-controller';
-import { downloadCsv } from '@shared/csv';
-import { DialogService } from '@shared/ui/dialogs';
+import { AuthSession, CatalogApi, Customer, ListController, Page, Supplier } from '@wms/core';
+import { DialogService, downloadCsv } from '@wms/design-system';
 import { PartnerDialogComponent } from './catalog-dialogs';
 
 type Partner = Supplier | Customer;

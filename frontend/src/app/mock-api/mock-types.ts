@@ -4,6 +4,7 @@
  */
 import {
   ActivityEntry,
+  Bin,
   Customer,
   FieldError,
   Inbound,
@@ -22,8 +23,7 @@ import {
   User,
   Warehouse,
   Zone,
-  Bin,
-} from '@core/models';
+} from '@wms/core';
 
 export type DbWarehouse = Omit<Warehouse, 'zoneCount' | 'binCount' | 'capacityUnits' | 'usedUnits' | 'utilization'>;
 export type DbZone = Omit<Zone, 'binCount' | 'capacityUnits' | 'usedUnits' | 'utilization'>;
@@ -77,6 +77,22 @@ export interface DbSession {
   refreshExpiresAt: number;
   accessToken: string;
   accessExpiresAt: number;
+  /** The refresh token this one replaced, accepted briefly so two tabs refreshing at once don't collide. */
+  previousRefreshToken: string | null;
+  rotatedAt: number;
+  /** Every refresh token this session has used; presenting one again means it was stolen. */
+  usedRefreshTokens: string[];
+  /** Last authenticated request, for the idle timeout. */
+  lastSeenAt: number;
+}
+
+export interface DbNotification extends Omit<Notification, 'read'> {
+  /** Null = relevant to everyone who can see the warehouse (or everyone, if no warehouse). */
+  warehouseId: string | null;
+  /** Permission needed to see it, e.g. 'inventory:view'. */
+  permission: string | null;
+  /** Users who have read it. Read state is per user. */
+  readBy: string[];
 }
 
 export interface MockResponse {
@@ -104,7 +120,7 @@ export interface Db {
   users: DbUser[];
   roles: DbRole[];
   activity: ActivityEntry[];
-  notifications: (Notification & { userId: string | null })[];
+  notifications: DbNotification[];
   settings: Settings;
   reportRuns: Record<string, string>;
   sessions: DbSession[];

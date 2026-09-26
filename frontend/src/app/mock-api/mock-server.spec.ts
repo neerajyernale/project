@@ -169,6 +169,171 @@ describe('mock API server', () => {
     expect(admin('PUT', `/warehouses/${wh.id}`, body).status).toBe(409);
   });
 
+  // ---------------------------------------------------------------- audit fixes
+
+  const post = (method: string, path: string, body: unknown = {}) =>
+    server.handle({ method, path, query: new URLSearchParams(), body, header: () => null });
+
+  it('F1: revokes the session when a rotated refresh token is replayed', () => {
+    const stolen = server.cookieJar.get();
+    expect(post('POST', '/auth/refresh').status).toBe(200); // rotates; `stolen` is now used
+    const current = server.cookieJar.get();
+    // Outside the grace window, replaying the old token revokes the session.
+    const s = server.db.sessions.find((x) => x.refreshToken === current);
+    if (s) s.rotatedAt -= 60_000;
+    server.cookieJar.set(stolen ?? '', false);
+    expect(post('POST', '/auth/refresh').status).toBe(401);
+    server.cookieJar.set(current ?? '', false);
+    expect(post('POST', '/auth/refresh').status).toBe(401);
+  });
+
+  it('F1: tolerates two tabs refreshing at the same moment', () => {
+    const before = server.cookieJar.get();
+    expect(post('POST', '/auth/refresh').status).toBe(200);
+    server.cookieJar.set(before ?? '', false); // the other tab still holds the previous token
+    expect(post('POST', '/auth/refresh').status).toBe(200);
+  });
+
+  it('F2: ends sessions idle longer than the security setting', () => {
+    const picker = client(server, 'rohit.verma@wms360.com');
+    const session = server.db.sessions[server.db.sessions.length - 1];
+    session.lastSeenAt = Date.now() - 31 * 60 * 1000; // setting is 30 minutes
+    const res = picker('GET', '/pick-tasks');
+    expect(res.status).toBe(401);
+    expect((res.body as { detail: string }).detail).toContain('inactivity');
+  });
+
+  it('F3: shows notifications only for the user’s warehouses and permissions, with per-user read state', () => {
+    const suresh = client(server, 'suresh.rao@wms360.com'); // Hyderabad only
+    const mine = suresh('GET', '/notifications').body as { unread: number; items: { detail: string; id: string }[] };
+    const mumbaiIds = new Set(server.db.notifications.filter((n) => n.warehouseId === 'wh-mum').map((n) => n.id));
+    expect(mine.items.some((n) => mumbaiIds.has(n.id))).toBe(false);
+
+    const adminBefore = (admin('GET', '/notifications').body as { unread: number }).unread;
+    expect(suresh('POST', '/notifications/read-all').status).toBe(204);
+    expect((suresh('GET', '/notifications').body as { unread: number }).unread).toBe(0);
+    // Another user's unread count is unaffected.
+    expect((admin('GET', '/notifications').body as { unread: number }).unread).toBe(adminBefore);
+  });
+
+  it('F4: does not repeat a low-stock alert on every stock change', () => {
+    const before = server.db.notifications.filter((n) => n.title === 'Low stock alert').length;
+    server.checkLowStock('wh-mum', 'prd-10078');
+    server.checkLowStock('wh-mum', 'prd-10078');
+    const after = server.db.notifications.filter((n) => n.title === 'Low stock alert').length;
+    expect(after - before).toBeLessThanOrEqual(1);
+  });
+
+  it('F5: raises a capacity warning when enabled, and not when disabled', () => {
+    server.db.settings.operations.capacityAlertPct = 10;
+    server.db.notifications = server.db.notifications.filter((n) => n.title !== 'Warehouse capacity warning');
+    server.db.settings.notifications.capacity = false;
+    server.checkCapacity('wh-mum');
+    expect(server.db.notifications.some((n) => n.title === 'Warehouse capacity warning')).toBe(false);
+    server.db.settings.notifications.capacity = true;
+    server.checkCapacity('wh-mum');
+    expect(server.db.notifications.some((n) => n.title === 'Warehouse capacity warning')).toBe(true);
+  });
+
+  it('F6: stock received by transfer becomes allocatable after moving it out of the dock', () => {
+    const t = server.db.transfers.find((x) => x.number === 'TRF-3047'); // HYD → MUM, in transit
+    expect(admin('POST', `/transfers/${t?.id}/receive`).status).toBe(200);
+    const dock = server.db.balances.find((b) => b.warehouseId === 'wh-mum' && b.productId === 'prd-10112' && server.bin(b.binId).code.startsWith('RCV'));
+    expect(dock?.onHand).toBeGreaterThanOrEqual(220);
+    const target = server.db.bins.find((b) => b.warehouseId === 'wh-mum' && b.code === 'PCK-C-001');
+    const res = admin('POST', '/inventory/moves', { balanceId: dock?.id, toBinId: target?.id, qty: 220 });
+    expect(res.status).toBe(201);
+    expect(server.db.movements.filter((m) => m.reference.startsWith('MOV-')).length).toBe(2);
+    // Moving more than is available is refused.
+    expect(admin('POST', '/inventory/moves', { balanceId: dock?.id, toBinId: target?.id, qty: 999999 }).status).toBe(409);
+  });
+
+  it('F7: never reserves from, receives into or moves into an inactive zone', () => {
+    const zone = server.db.zones.find((z) => z.warehouseId === 'wh-del' && z.type === 'PICKING');
+    if (zone) zone.status = 'INACTIVE';
+    const binIds = new Set(server.db.bins.filter((b) => b.zoneId === zone?.id).map((b) => b.id));
+    const reservations = server.reserve('wh-del', 'prd-10001', 5, 'TEST', 'test');
+    expect(reservations.every((r) => !binIds.has(server.db.balances.find((b) => b.id === r.balanceId)?.binId ?? ''))).toBe(true);
+    const from = server.db.balances.find((b) => b.warehouseId === 'wh-del' && !binIds.has(b.binId) && server.available(b) > 0);
+    const res = admin('POST', '/inventory/moves', { balanceId: from?.id, toBinId: Array.from(binIds)[0], qty: 1 });
+    expect(res.status).toBe(409);
+  });
+
+  it('F8: only the source warehouse approves or dispatches; only the destination receives', () => {
+    const requested = server.db.transfers.find((x) => x.number === 'TRF-3046'); // MUM → HYD
+    const suresh = client(server, 'suresh.rao@wms360.com'); // Hyderabad = destination
+    expect(suresh('POST', `/transfers/${requested?.id}/approve`).status).toBe(403);
+    const rajesh = client(server, 'rajesh.kumar@wms360.com'); // Mumbai = source
+    expect(rajesh('POST', `/transfers/${requested?.id}/approve`).status).toBe(200);
+    expect(rajesh('POST', `/transfers/${requested?.id}/dispatch`).status).toBe(200);
+    expect(rajesh('POST', `/transfers/${requested?.id}/receive`).status).toBe(403);
+    expect(suresh('POST', `/transfers/${requested?.id}/receive`).status).toBe(200);
+  });
+
+  it('F9: a report for "all warehouses" is not narrowed by the active warehouse header', () => {
+    const all = admin('POST', '/reports/inventory-summary/run', { warehouseId: '' }, { 'X-Warehouse-Id': 'wh-mum' }).body as { rows: { warehouse: string }[] };
+    expect(new Set(all.rows.map((r) => r.warehouse)).size).toBe(5);
+  });
+
+  it('F10: hides admin activity from people who do not manage access', () => {
+    admin('POST', '/users', { name: 'Test Person', email: 'test.person@wms360.com', roleId: 'role-viewer', warehouseIds: [] });
+    const picker = client(server, 'rohit.verma@wms360.com');
+    const feed = picker('GET', '/activity?size=200').body as { content: { kind: string }[] };
+    expect(feed.content.some((a) => a.kind === 'admin')).toBe(false);
+    const adminFeed = admin('GET', '/activity?size=200').body as { content: { kind: string }[] };
+    expect(adminFeed.content.some((a) => a.kind === 'admin')).toBe(true);
+  });
+
+  it('F11: dashboard alerts only link to pages the user may open', () => {
+    const picker = client(server, 'rohit.verma@wms360.com');
+    const s = picker('GET', '/dashboard/summary').body as { alerts: { link: string }[] };
+    expect(s.alerts.some((a) => a.link.startsWith('/warehouses') || a.link.startsWith('/shipping') || a.link.startsWith('/inbound'))).toBe(false);
+  });
+
+  it('F12: pick tasks go only to people allowed to pick in that warehouse', () => {
+    const task = server.db.pickTasks.find((t) => t.status === 'PENDING' || t.status === 'ASSIGNED');
+    expect(admin('POST', `/pick-tasks/${task?.id}/assign`, { picker: 'Sneha Iyer' }).status).toBe(422); // packer
+    const staff = admin('GET', `/users/staff?permission=picking:edit&warehouseId=${task?.warehouseId}`).body as { name: string }[];
+    expect(staff.every((u) => u.name !== 'Sneha Iyer')).toBe(true);
+    expect(admin('POST', `/pick-tasks/${task?.id}/assign`, { picker: staff[0].name }).status).toBe(200);
+  });
+
+  it('F13: scoped users can pick any active warehouse as a transfer destination', () => {
+    const rajesh = client(server, 'rajesh.kumar@wms360.com');
+    const own = rajesh('GET', '/warehouses/options').body as unknown[];
+    const network = rajesh('GET', '/warehouses/options?scope=network').body as unknown[];
+    expect(own.length).toBe(1);
+    expect(network.length).toBe(5);
+  });
+
+  it('F14: count endpoints agree with the lists', () => {
+    const counts = admin('GET', '/orders/counts').body as { total: number; byStatus: Record<string, number> };
+    const list = admin('GET', '/orders?size=200').body as { totalElements: number };
+    expect(counts.total).toBe(list.totalElements);
+    expect(Object.values(counts.byStatus).reduce((a, b) => a + b, 0)).toBe(counts.total);
+    for (const path of ['/pick-tasks/counts', '/inbound/counts', '/transfers/counts']) expect(admin('GET', path).status).toBe(200);
+  });
+
+  it('F15/F16: refuses discontinued products on inbound and past required-by dates', () => {
+    const p = server.db.products.find((x) => x.id === 'prd-10188');
+    if (p) p.status = 'DISCONTINUED';
+    const inbound = admin('POST', '/inbound', {
+      supplierId: 'sup-18',
+      warehouseId: 'wh-mum',
+      expectedAt: new Date(Date.now() + 86400000).toISOString(),
+      lines: [{ productId: 'prd-10188', expectedQty: 5 }],
+    });
+    expect(inbound.status).toBe(409);
+    const order = admin('POST', '/orders', {
+      customerId: 'cus-1001',
+      warehouseId: 'wh-mum',
+      priority: 'NORMAL',
+      requiredBy: new Date(Date.now() - 3 * 86400000).toISOString(),
+      lines: [{ productId: 'prd-10001', qty: 1 }],
+    });
+    expect(order.status).toBe(422);
+  });
+
   it('computes dashboard figures from data, not constants', () => {
     const res = admin('GET', '/dashboard/summary');
     expect(res.status).toBe(200);

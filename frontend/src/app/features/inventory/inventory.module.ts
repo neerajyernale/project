@@ -1,9 +1,9 @@
 import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
-import { PermissionGuard } from '@core/auth/guards';
-import { SharedModule } from '@shared/shared.module';
-import { AdjustDialogComponent, BalancesDialogComponent, TransferDialogComponent } from './inventory-dialogs';
+import { PermissionGuard } from '@wms/core';
+import { SharedModule } from '@wms/design-system';
+import { AdjustDialogComponent, BalancesDialogComponent, MoveDialogComponent, TransferDialogComponent } from './inventory-dialogs';
 import { InventoryComponent, MovementsComponent, TransferDetailComponent, TransfersComponent } from './inventory-pages';
 
 /** Remote boundary: `wms-inventory` — stock truth, including transfers (docs/MICROFRONTEND.md §2). */
@@ -15,6 +15,7 @@ import { InventoryComponent, MovementsComponent, TransferDetailComponent, Transf
     TransferDetailComponent,
     BalancesDialogComponent,
     AdjustDialogComponent,
+    MoveDialogComponent,
     TransferDialogComponent,
   ],
   imports: [

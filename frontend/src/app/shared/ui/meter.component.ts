@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   selector: 'wms-meter',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="meter" role="meter" [attr.aria-valuenow]="value" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="label">
+    <div class="meter" role="meter" [attr.aria-valuenow]="value" [attr.aria-valuemin]="0" [attr.aria-valuemax]="100" [attr.aria-label]="label">
       <div class="meter-track" [class.wide]="wide">
         <div class="meter-fill" [class.warning]="severity === 'warning'" [class.danger]="severity === 'danger'" [style.width.%]="clamped"></div>
       </div>

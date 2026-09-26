@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $names = \\(Get-Content federation.remotes.json | ConvertFrom-Json\\).name; foreach \\($n in $names\\) { $out = npx ng build \"mfe-$n\" 2>&1 | Out-String; if \\($LASTEXITCODE -ne 0 -or $out -match 'Error'\\) { \"=== mfe-$n FAILED\"; \\($out -split \"`n\" | Select-String 'Error' | Select-Object -First 10\\) } else { \"mfe-$n ok\" } })",
+      "Read(//c/Users/Neeraj/AppData/Local/Temp/ng-c3A4Pi/**)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; node -e \"const fs=require\\('fs'\\);const a=JSON.parse\\(fs.readFileSync\\('angular.json','utf8'\\)\\);fs.writeFileSync\\('angular.json',JSON.stringify\\(a,null,2\\)+'\\\\n'\\)\"; $names = \\(Get-Content federation.remotes.json | ConvertFrom-Json\\).name; foreach \\($n in $names\\) { $out = cmd /c \"npx ng build mfe-$n 2>&1\"; if \\($LASTEXITCODE -ne 0\\) { \"=== mfe-$n FAILED\"; $out | Select-Object -Last 15 } else { \"mfe-$n ok  \" + \\(\\($out | Select-String 'remoteEntry'\\) -replace '\\\\s+',' '\\) } })",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $b = [IO.File]::ReadAllBytes\\(\"$PWD\\\\scripts\\\\serve-dist.mjs\"\\); if \\($b[0] -eq 0xEF\\) { [IO.File]::WriteAllBytes\\(\"$PWD\\\\scripts\\\\serve-dist.mjs\", $b[3..\\($b.Length-1\\)]\\); 'stripped BOM' } else { 'no BOM' })",
+      "PowerShell(Start-Sleep 2; foreach \\($u in 'http://localhost:8080/','http://localhost:8080/assets/config/mf.manifest.json','http://localhost:8080/mfe/inventory/remoteEntry.js','http://localhost:8080/inventory','http://localhost:8080/mfe/../package.json'\\) { try { $r = Invoke-WebRequest $u -UseBasicParsing; \"$\\($r.StatusCode\\) $\\($r.Headers['Cache-Control']\\)  $u\" } catch { \"$\\($_.Exception.Response.StatusCode.value__\\)  $u\" } })",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:WMS_URL='http://localhost:8080'; node e2e/run-all.mjs 2>&1 | Select-String -Pattern '===|problems|✗|errors:|scenarios|checks' | Select-Object -Last 40; \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; node scripts/dev.mjs 2>&1; \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:SHELL_PORT='4210'; node scripts/dev.mjs)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $c = \\(Invoke-WebRequest http://127.0.0.1:4210/styles.js -UseBasicParsing -TimeoutSec 20\\).Content; \"styles.js uses import.meta: \" + $c.Contains\\('import.meta'\\); $env:WMS_URL='http://localhost:4210'; node e2e/federation.mjs 2>&1; \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; foreach \\($u in 'http://localhost:4210','http://localhost:8080'\\) { $env:WMS_URL=$u; \"--- $u\"; node e2e/federation.mjs 2>&1 })",
+      "PowerShell(node C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Angular-project\\\\eff677f8-dda0-4e22-ace2-9d798229c672\\\\scratchpad\\\\debug-broken.mjs 2>&1)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $cfg='C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Angular-project\\\\eff677f8-dda0-4e22-ace2-9d798229c672\\\\scratchpad\\\\eslintrc.proposed.json'; cmd /c \"npx eslint --no-eslintrc -c `\"$cfg`\" --ext .ts,.html src projects -f unix 2>&1\" | Select-Object -Last 40)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $cfg='C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Angular-project\\\\eff677f8-dda0-4e22-ace2-9d798229c672\\\\scratchpad\\\\eslintrc.proposed.json'; $out = cmd /c \"npx eslint --no-eslintrc -c `\"$cfg`\" --resolve-plugins-relative-to . --ext .ts,.html src projects -f unix 2>&1\"; $out | Select-Object -Last 3; \"--- by rule:\"; $out | ForEach-Object { if \\($_ -match '\\\\[\\(Error|Warning\\)/\\([^\\\\]]+\\)\\\\]'\\) { $matches[2] } } | Group-Object | Sort-Object Count -Descending | ForEach-Object { \"$\\($_.Count\\)  $\\($_.Name\\)\" })",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:WMS_URL='http://localhost:4210'; node e2e/_contrast.mjs 2>&1)",
+      "PowerShell(node C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Angular-project\\\\eff677f8-dda0-4e22-ace2-9d798229c672\\\\scratchpad\\\\contrast.mjs)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Start-Sleep 12; $env:WMS_URL='http://localhost:4210'; node e2e/a11y.mjs 2>&1; \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Remove-Item e2e\\\\_contrast.mjs; Start-Sleep 15; $env:WMS_URL='http://localhost:4210'; node e2e/a11y.mjs 2>&1; \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:WMS_URL='http://localhost:8080'; node e2e/run-all.mjs 2>&1 | Select-String -Pattern '===|problems|✗|errors:|scenarios|checks|audited'; \"exit: $LASTEXITCODE\")"
+    ]
+  }
+}

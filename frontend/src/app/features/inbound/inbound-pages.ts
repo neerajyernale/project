@@ -5,16 +5,23 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, merge, of } from 'rxjs';
 import { catchError, map, skip, switchMap, tap } from 'rxjs/operators';
 
-import { errorMessage } from '@core/api/api-error';
-import { CatalogApi, InboundApi, PartnerOption, ProductOption, WarehouseApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Bin, Inbound } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController, ResourceState, loadResource } from '@core/state/list-controller';
-import { DialogService } from '@shared/ui/dialogs';
-import { FormDialog } from '@shared/ui/form-dialog';
-import { LineForm, lineGroup } from '@shared/ui/line-items.component';
+import {
+  AuthSession,
+  Bin,
+  CatalogApi,
+  errorMessage,
+  Inbound,
+  InboundApi,
+  ListController,
+  loadResource,
+  PartnerOption,
+  ProductOption,
+  ResourceState,
+  ToastService,
+  WarehouseApi,
+  WarehouseContext,
+} from '@wms/core';
+import { DialogService, FormDialog, LineForm, lineGroup } from '@wms/design-system';
 
 const STATUSES: Inbound['status'][] = ['EXPECTED', 'RECEIVING', 'PUTAWAY_PENDING', 'COMPLETED', 'CANCELLED'];
 
@@ -184,12 +191,14 @@ export class InboundListComponent implements OnInit, OnDestroy {
     destroy$: this.destroy$,
   });
   readonly counts$ = merge(this.context.activeId$, this.changed$).pipe(
-    switchMap(() => this.api.list({ size: 200 })),
-    map((p) => {
-      const c: Record<Inbound['status'], number> = { EXPECTED: 0, RECEIVING: 0, PUTAWAY_PENDING: 0, COMPLETED: 0, CANCELLED: 0 };
-      p.content.forEach((x) => c[x.status]++);
-      return c;
-    }),
+    switchMap(() => this.api.counts()),
+    map(({ byStatus }): Record<Inbound['status'], number> => ({
+      EXPECTED: byStatus['EXPECTED'] ?? 0,
+      RECEIVING: byStatus['RECEIVING'] ?? 0,
+      PUTAWAY_PENDING: byStatus['PUTAWAY_PENDING'] ?? 0,
+      COMPLETED: byStatus['COMPLETED'] ?? 0,
+      CANCELLED: byStatus['CANCELLED'] ?? 0,
+    })),
   );
 
   constructor(
@@ -245,6 +254,8 @@ type PutawayRow = FormGroup<{ productId: FormControl<string>; binId: FormControl
 export class InboundDetailComponent {
   readonly reload$ = new Subject<void>();
   bins: Bin[] = [];
+  /** Putaway can't be submitted until bins (and suggestions) have loaded. */
+  binsReady = false;
   busy = false;
   banner = '';
   receiveForm = new FormArray<ReceiveRow>([]);
@@ -284,6 +295,7 @@ export class InboundDetailComponent {
       );
     }
     if (x.status === 'PUTAWAY_PENDING') {
+      this.binsReady = false;
       const toStore = x.lines.filter((l) => l.receivedQty - l.damagedQty > 0);
       this.putawayForm = new FormArray<PutawayRow>(
         toStore.map((l) => new FormGroup({ productId: new FormControl(l.productId, { nonNullable: true }), binId: new FormControl('', { nonNullable: true, validators: [Validators.required] }) })),
@@ -305,6 +317,8 @@ export class InboundDetailComponent {
             g.controls.binId.setValue(pick.id);
             free.set(pick.id, (free.get(pick.id) ?? 0) - units);
           }
+          this.binsReady = true;
+          if (!this.bins.length) this.banner = 'No storage or picking bin can take stock in this warehouse. Add or unblock a bin first.';
           this.cdr.markForCheck();
         });
     }

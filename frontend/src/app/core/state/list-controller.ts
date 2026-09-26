@@ -2,9 +2,9 @@ import { ActivatedRoute, Params, Router } from '@angular/router';
 import { BehaviorSubject, NEVER, Observable, Subject, combineLatest, merge, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, shareReplay, skip, startWith, switchMap, takeUntil } from 'rxjs/operators';
 
-import { ApiError, toApiError } from '@core/api/api-error';
-import { QueryParams } from '@core/api/api-client';
-import { Page } from '@core/models';
+import { ApiError, toApiError } from '../api/api-error';
+import { QueryParams } from '../api/api-client';
+import { Page } from '../models';
 
 /** The page-state contract (ARCHITECTURE §3.3): a data page renders exactly one of these. */
 export type ViewStatus = 'loading' | 'ready' | 'empty' | 'no-results' | 'error' | 'forbidden' | 'offline';
@@ -66,6 +66,8 @@ export class ListController<T> {
 
     if (options.route) {
       this.querySubject.pipe(skip(1), takeUntil(options.destroy$ ?? new Subject())).subscribe((q) => this.writeUrl(q));
+      // `?new=1` has done its job once the page opened its dialog; drop it so a refresh doesn't reopen it.
+      if (options.route.route.snapshot.queryParamMap.has('new')) setTimeout(() => this.writeUrl(this.query));
     }
 
     const trigger$ = combineLatest([
@@ -164,7 +166,8 @@ export class ListController<T> {
     const params: Params = this.options.route?.route.snapshot.queryParams ?? {};
     const filters: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) {
-      if (['q', 'page', 'size', 'sort'].includes(k) || typeof v !== 'string' || !v) continue;
+      // `new`/`created` are one-shot page signals (open a dialog, show a banner), not filters.
+      if (['q', 'page', 'size', 'sort', 'new', 'created'].includes(k) || typeof v !== 'string' || !v) continue;
       filters[k] = v;
     }
     return {
@@ -179,7 +182,7 @@ export class ListController<T> {
   private writeUrl(q: ListQueryState): void {
     const r = this.options.route;
     if (!r) return;
-    const queryParams: Params = { ...q.filters, q: q.q || null, page: q.page || null, size: q.size !== (this.options.size ?? 25) ? q.size : null, sort: q.sort !== (this.options.sort ?? '') ? q.sort : null };
+    const queryParams: Params = { ...q.filters, new: null, q: q.q || null, page: q.page || null, size: q.size !== (this.options.size ?? 25) ? q.size : null, sort: q.sort !== (this.options.sort ?? '') ? q.sort : null };
     // Remove filters that were cleared.
     for (const k of Object.keys(r.route.snapshot.queryParams)) if (!(k in queryParams)) queryParams[k] = null;
     void r.router.navigate([], { relativeTo: r.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });

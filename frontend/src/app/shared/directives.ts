@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 
-import { AuthSession } from '@core/auth/auth-session.service';
+import { AuthSession } from '@wms/core';
 
 /**
  * `*wmsCan="'orders:create'"` renders only when the permission is granted (any-of for arrays).

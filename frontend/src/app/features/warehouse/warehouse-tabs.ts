@@ -1,14 +1,23 @@
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, combineLatest } from 'rxjs';
+import { BehaviorSubject, Subject, combineLatest } from 'rxjs';
 import { map, switchMap, take } from 'rxjs/operators';
 
-import { FulfillmentApi, InsightsApi, InventoryApi, WarehouseApi } from '@core/api/domain-apis';
-import { ActivityEntry, Bin, Order, Warehouse, Zone } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController, loadResource } from '@core/state/list-controller';
-import { ChartSeries } from '@shared/charts/chart-utils';
-import { DialogService } from '@shared/ui/dialogs';
+import {
+  ActivityEntry,
+  Bin,
+  FulfillmentApi,
+  InsightsApi,
+  InventoryApi,
+  ListController,
+  loadResource,
+  Order,
+  ToastService,
+  Warehouse,
+  WarehouseApi,
+  Zone,
+} from '@wms/core';
+import { ChartSeries, DialogService } from '@wms/design-system';
 import { BinDialogComponent, ZoneDialogComponent } from './warehouse-dialogs';
 import { WarehouseDetailStore } from './warehouse-detail.component';
 
@@ -121,7 +130,7 @@ export class WarehouseZonesComponent {
         </label>
         <select class="filter-select" aria-label="Zone" [value]="list.filter('zoneId')" (change)="list.setFilter('zoneId', $any($event.target).value)">
           <option value="">All zones</option>
-          <option *ngFor="let z of zones$ | async" [value]="z.id">{{ z.name }} ({{ z.code }})</option>
+          <option *ngFor="let z of zones$ | async" [value]="z.id" [selected]="z.id === list.filter('zoneId')">{{ z.name }} ({{ z.code }})</option>
         </select>
         <select class="filter-select" aria-label="Status" [value]="list.filter('status')" (change)="list.setFilter('status', $any($event.target).value)">
           <option value="">All statuses</option>
@@ -227,7 +236,7 @@ export class WarehouseBinsComponent implements OnDestroy {
         <div><h2>Stock in this warehouse</h2><p>{{ binFilter ? 'Filtered to one bin' : 'Every bin holding stock' }}</p></div>
         <a *ngIf="binFilter" class="link-btn" routerLink="." [queryParams]="{}">Show all bins</a>
       </div>
-      <wms-state-view *ngIf="s.status !== 'ready'" [status]="s.status" [error]="s.error" entity="stock" (retry)="0"></wms-state-view>
+      <wms-state-view *ngIf="s.status !== 'ready'" [status]="s.status" [error]="s.error" entity="stock" (retry)="retry$.next()"></wms-state-view>
       <ng-container *ngIf="s.data as rows">
         <wms-state-view *ngIf="!rows.length" status="empty" icon="inventory" emptyTitle="No stock here" emptyHint="Receive an inbound shipment or a transfer to add stock."></wms-state-view>
         <div class="table-scroll" *ngIf="rows.length" style="margin-top: 12px">
@@ -253,7 +262,8 @@ export class WarehouseBinsComponent implements OnDestroy {
 })
 export class WarehouseInventoryComponent {
   readonly binFilter = this.route.snapshot.queryParamMap.get('binId');
-  readonly state$ = combineLatest([this.store.id$, this.route.queryParamMap]).pipe(
+  readonly retry$ = new BehaviorSubject<void>(undefined);
+  readonly state$ = combineLatest([this.store.id$, this.route.queryParamMap, this.retry$]).pipe(
     switchMap(([id, q]) => loadResource(this.inventory.balances({ warehouseId: id, binId: q.get('binId') }))),
   );
 

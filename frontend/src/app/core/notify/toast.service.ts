@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Tone } from '@core/models';
+import { Tone } from '../models';
 
 export interface Toast {
   id: number;

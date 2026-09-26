@@ -1,5 +1,5 @@
-import { ADJUSTMENT_REASONS, InventoryBalance, InventoryItem, Transfer, TransferLine } from '@core/models';
-import { DbBalance, DbTransfer, Reservation, conflict, notFound } from '../mock-types';
+import { ADJUSTMENT_REASONS, InventoryBalance, InventoryItem, Transfer, TransferLine } from '@wms/core';
+import { ApiException, DbBalance, DbTransfer, Reservation, conflict, notFound } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 
 export function registerInventoryRoutes(s: MockServer): void {
@@ -133,6 +133,33 @@ export function registerInventoryRoutes(s: MockServer): void {
     { permission: 'inventory:edit' },
   );
 
+  /**
+   * Moves stock between two bins of the same warehouse — putaway of transfer receipts from the
+   * dock, re-slotting, consolidating. Only available (unreserved, undamaged) stock can move.
+   */
+  s.on(
+    'POST',
+    '/inventory/moves',
+    (ctx) => {
+      const from = s.db.balances.find((x) => x.id === ctx.body['balanceId']);
+      if (!from) throw notFound('Stock record');
+      s.assertWarehouseAccess(ctx, from.warehouseId);
+      const toBin = s.db.bins.find((b) => b.id === ctx.body['toBinId']);
+      const qty = s.num(ctx.body['qty']);
+      s.validate([
+        [!!toBin && toBin.warehouseId === from.warehouseId, 'toBinId', 'Choose a bin in the same warehouse.'],
+        [!!toBin && toBin.id !== from.binId, 'toBinId', 'Choose a different bin.'],
+        [Number.isInteger(qty) && qty > 0, 'qty', 'Enter a whole number above 0.'],
+      ]);
+      const ref = s.nextNumber('moveNo', 'MOV', 9001);
+      s.moveStock(from, toBin?.id ?? '', qty, ref, s.actor(ctx));
+      const p = s.product(from.productId);
+      s.log('inventory', 'info', `Stock moved · ${p.sku}`, `${qty} units ${s.bin(from.binId).code} → ${toBin?.code}`, from.warehouseId, s.actor(ctx));
+      return toBalance(s.balanceFor(from.warehouseId, toBin?.id ?? '', from.productId));
+    },
+    { permission: 'inventory:edit' },
+  );
+
   // ------------------------------------------------------------------ transfers
 
   const toTransfer = (t: DbTransfer): Transfer => {
@@ -140,11 +167,21 @@ export function registerInventoryRoutes(s: MockServer): void {
     return rest;
   };
 
-  const findTransfer = (ctx: Ctx): DbTransfer => {
+  /**
+   * Both ends may view a transfer. Commands belong to one end: the source approves, rejects,
+   * cancels and dispatches its own stock; only the destination can receive it.
+   */
+  const findTransfer = (ctx: Ctx, side?: 'source' | 'dest'): DbTransfer => {
     const t = s.db.transfers.find((x) => x.id === ctx.params['id']);
     if (!t) throw notFound('Transfer');
     const allowed = s.allowedWarehouses(ctx.user);
     if (allowed && !allowed.has(t.sourceWarehouseId) && !allowed.has(t.destWarehouseId)) throw notFound('Transfer');
+    if (allowed && side === 'source' && !allowed.has(t.sourceWarehouseId)) {
+      throw new ApiException(403, 'Forbidden', `Only staff at ${t.sourceWarehouseName} can do this.`);
+    }
+    if (allowed && side === 'dest' && !allowed.has(t.destWarehouseId)) {
+      throw new ApiException(403, 'Forbidden', `Only staff at ${t.destWarehouseName} can receive this transfer.`);
+    }
     return t;
   };
 
@@ -167,6 +204,20 @@ export function registerInventoryRoutes(s: MockServer): void {
         .filter((t) => s.matchesQ(q, t.number, t.sourceWarehouseName, t.destWarehouseName, t.requestedBy, ...t.lines.map((l) => l.sku)))
         .map(toTransfer);
       return s.paginate(rows, ctx.query, 'requestedAt,desc');
+    },
+    { permission: 'transfers:view' },
+  );
+
+  s.on(
+    'GET',
+    '/transfers/counts',
+    (ctx) => {
+      const inScope = s.warehouseFilter(ctx);
+      const byStatus: Record<string, number> = {};
+      s.db.transfers
+        .filter((t) => inScope(t.sourceWarehouseId) || inScope(t.destWarehouseId))
+        .forEach((t) => (byStatus[t.status] = (byStatus[t.status] ?? 0) + 1));
+      return { byStatus };
     },
     { permission: 'transfers:view' },
   );
@@ -213,7 +264,7 @@ export function registerInventoryRoutes(s: MockServer): void {
       };
       s.db.transfers.push(t);
       s.log('transfer', 'info', `Transfer ${t.number} requested`, `${t.sourceWarehouseName} → ${t.destWarehouseName}`, source, s.actor(ctx));
-      s.notify('info', 'Transfer awaiting approval', `${t.number} · ${t.totalQty} units`, `/transfers/${t.id}`);
+      s.notify('info', 'Transfer awaiting approval', `${t.number} · ${t.totalQty} units`, `/transfers/${t.id}`, { warehouseId: source, permission: 'transfers:approve' });
       return toTransfer(t);
     },
     { permission: 'transfers:create' },
@@ -223,7 +274,7 @@ export function registerInventoryRoutes(s: MockServer): void {
     'POST',
     '/transfers/:id/approve',
     (ctx) => {
-      const t = findTransfer(ctx);
+      const t = findTransfer(ctx, 'source');
       expect(t, 'REQUESTED');
       const reservations: Reservation[] = [];
       try {
@@ -245,7 +296,7 @@ export function registerInventoryRoutes(s: MockServer): void {
     'POST',
     '/transfers/:id/reject',
     (ctx) => {
-      const t = findTransfer(ctx);
+      const t = findTransfer(ctx, 'source');
       expect(t, 'REQUESTED');
       t.status = 'REJECTED';
       t.note = s.str(ctx.body['reason']) || t.note;
@@ -260,7 +311,7 @@ export function registerInventoryRoutes(s: MockServer): void {
     'POST',
     '/transfers/:id/cancel',
     (ctx) => {
-      const t = findTransfer(ctx);
+      const t = findTransfer(ctx, 'source');
       expect(t, 'REQUESTED', 'APPROVED');
       s.release(t.reservations, t.number, s.actor(ctx));
       t.reservations = [];
@@ -276,7 +327,7 @@ export function registerInventoryRoutes(s: MockServer): void {
     'POST',
     '/transfers/:id/dispatch',
     (ctx) => {
-      const t = findTransfer(ctx);
+      const t = findTransfer(ctx, 'source');
       expect(t, 'APPROVED');
       s.shipOut(t.reservations, t.number, s.actor(ctx));
       t.reservations = [];
@@ -293,14 +344,15 @@ export function registerInventoryRoutes(s: MockServer): void {
     'POST',
     '/transfers/:id/receive',
     (ctx) => {
-      const t = findTransfer(ctx);
+      const t = findTransfer(ctx, 'dest');
       expect(t, 'IN_TRANSIT');
       const bin = s.receivingBin(t.destWarehouseId);
       for (const l of t.lines) s.receive(t.destWarehouseId, bin.id, l.productId, l.qty, 0, t.number, s.actor(ctx), 'TRANSFER_IN');
       t.status = 'COMPLETED';
       t.updatedAt = s.nowIso();
       s.log('transfer', 'success', `Transfer ${t.number} received`, `${t.destWarehouseName} · bin ${bin.code}`, t.destWarehouseId, s.actor(ctx));
-      s.notify('success', 'Stock transfer completed', `${t.number} delivered to ${t.destWarehouseName}`, `/transfers/${t.id}`);
+      s.notify('success', 'Stock transfer completed', `${t.number} delivered to ${t.destWarehouseName}`, `/transfers/${t.id}`, { warehouseId: t.destWarehouseId, permission: 'transfers:view' });
+      s.checkCapacity(t.destWarehouseId);
       return toTransfer(t);
     },
     { permission: 'transfers:create', status: 200 },

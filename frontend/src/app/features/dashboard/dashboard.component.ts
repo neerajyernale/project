@@ -2,14 +2,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Subject, combineLatest, merge } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
-import { InsightsApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { ActivityEntry, DashboardSummary, Tone } from '@core/models';
-import { loadResource } from '@core/state/list-controller';
-import { humanize } from '@shared/status/status-tones';
-import { ChartSeries } from '@shared/charts/chart-utils';
-import { BarListRow } from '@shared/charts/charts';
+import { ActivityEntry, AuthSession, DashboardSummary, InsightsApi, loadResource, Tone, WarehouseContext } from '@wms/core';
+import { BarListRow, ChartSeries, humanize } from '@wms/design-system';
 
 interface KpiTile {
   label: string;

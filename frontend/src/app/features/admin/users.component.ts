@@ -4,14 +4,8 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
-import { AdminApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { WarehouseContext } from '@core/context/warehouse-context.service';
-import { Role, User } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { ListController } from '@core/state/list-controller';
-import { DialogService } from '@shared/ui/dialogs';
-import { FormDialog } from '@shared/ui/form-dialog';
+import { AdminApi, AuthSession, ListController, Role, ToastService, User, WarehouseContext } from '@wms/core';
+import { DialogService, FormDialog } from '@wms/design-system';
 
 export const ADMIN_TABS = `
   <nav class="tabs" aria-label="Access management">
@@ -129,11 +123,11 @@ export class UserDialogComponent extends FormDialog<User> {
           </label>
           <select class="filter-select" aria-label="Role" [value]="list.filter('roleId')" (change)="list.setFilter('roleId', $any($event.target).value)">
             <option value="">All roles</option>
-            <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
+            <option *ngFor="let r of roles" [value]="r.id" [selected]="r.id === list.filter('roleId')">{{ r.name }}</option>
           </select>
           <select class="filter-select" aria-label="Warehouse" [value]="list.filter('warehouseId')" (change)="list.setFilter('warehouseId', $any($event.target).value)">
             <option value="">All warehouses</option>
-            <option *ngFor="let w of context.options$ | async" [value]="w.id">{{ w.name }}</option>
+            <option *ngFor="let w of context.options$ | async" [value]="w.id" [selected]="w.id === list.filter('warehouseId')">{{ w.name }}</option>
           </select>
           <select class="filter-select" aria-label="Status" [value]="list.filter('status')" (change)="list.setFilter('status', $any($event.target).value)">
             <option value="">All statuses</option><option value="ACTIVE">Active</option><option value="DISABLED">Disabled</option>

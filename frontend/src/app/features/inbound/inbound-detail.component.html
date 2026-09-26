@@ -85,7 +85,7 @@
         </table>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-primary" (click)="putaway(x)" [disabled]="busy"><wms-icon name="layers"></wms-icon>{{ busy ? 'Moving…' : 'Complete putaway' }}</button>
+        <button type="button" class="btn btn-primary" (click)="putaway(x)" [disabled]="busy || !binsReady || !bins.length"><wms-icon name="layers"></wms-icon>{{ busy ? 'Moving…' : binsReady ? 'Complete putaway' : 'Loading bins…' }}</button>
       </div>
     </section>
 

@@ -1,4 +1,4 @@
-import { Inbound, InboundLine } from '@core/models';
+import { Inbound, InboundLine } from '@wms/core';
 import { conflict, notFound } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 
@@ -40,6 +40,18 @@ export function registerInboundRoutes(s: MockServer): void {
     { permission: 'inbound:view' },
   );
 
+  s.on(
+    'GET',
+    '/inbound/counts',
+    (ctx) => {
+      const inScope = s.warehouseFilter(ctx);
+      const byStatus: Record<string, number> = {};
+      s.db.inbounds.filter((x) => inScope(x.warehouseId)).forEach((x) => (byStatus[x.status] = (byStatus[x.status] ?? 0) + 1));
+      return { byStatus };
+    },
+    { permission: 'inbound:view' },
+  );
+
   s.on('GET', '/inbound/:id', (ctx) => find(ctx), { permission: 'inbound:view' });
 
   s.on(
@@ -61,6 +73,7 @@ export function registerInboundRoutes(s: MockServer): void {
       s.assertWarehouseAccess(ctx, warehouseId);
       const lines: InboundLine[] = raw.map((l) => {
         const p = s.product(l.productId);
+        if (p.status !== 'ACTIVE') throw conflict(`${p.sku} is discontinued and cannot be received.`);
         return { productId: p.id, sku: p.sku, productName: p.name, expectedQty: Number(l.expectedQty), receivedQty: 0, damagedQty: 0, putawayBinCode: null };
       });
       const x: Inbound = {
@@ -84,7 +97,7 @@ export function registerInboundRoutes(s: MockServer): void {
       recompute(x);
       s.db.inbounds.push(x);
       s.log('inbound', 'info', `Inbound ${x.number} scheduled`, `${x.supplierName} · ${x.totalExpected} units`, warehouseId, s.actor(ctx));
-      s.notify('info', 'Inbound shipment scheduled', `${x.number} expected ${new Date(x.expectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}`, `/inbound/${x.id}`, 'inboundReminder');
+      s.notify('info', 'Inbound shipment scheduled', `${x.number} expected ${new Date(x.expectedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}`, `/inbound/${x.id}`, { setting: 'inboundReminder', warehouseId, permission: 'inbound:view' });
       return x;
     },
     { permission: 'inbound:create' },
@@ -132,7 +145,8 @@ export function registerInboundRoutes(s: MockServer): void {
       x.status = 'PUTAWAY_PENDING';
       recompute(x);
       s.log('inbound', x.discrepancy ? 'warning' : 'success', `Inbound ${x.number} received`, `${x.totalReceived} of ${x.totalExpected} units${x.discrepancy ? ' · discrepancy' : ''}`, x.warehouseId, s.actor(ctx));
-      if (x.discrepancy) s.notify('warning', 'Receiving discrepancy', `${x.number}: ${x.totalReceived} of ${x.totalExpected} units received`, `/inbound/${x.id}`);
+      if (x.discrepancy) s.notify('warning', 'Receiving discrepancy', `${x.number}: ${x.totalReceived} of ${x.totalExpected} units received`, `/inbound/${x.id}`, { warehouseId: x.warehouseId, permission: 'inbound:view' });
+      s.checkCapacity(x.warehouseId);
       return x;
     },
     { permission: 'inbound:edit', status: 200 },

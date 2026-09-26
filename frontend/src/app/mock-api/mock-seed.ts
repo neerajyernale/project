@@ -5,16 +5,15 @@
  * are consistent by construction. Prototype inconsistencies are fixed on the way:
  * ORD-10432 is cancelled with no shipment, and inbound shipments use ASN-* numbers.
  */
-import { ALL_PERMISSIONS, Settings, ZoneType } from '@core/models';
+import { ALL_PERMISSIONS, Settings, ZoneType } from '@wms/core';
 import { Db, DbBin, DbProduct, DbRole, DbUser, DbWarehouse, DbZone } from './mock-types';
 import { MockServer } from './mock-server';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 7;
 export const DEMO_PASSWORD = 'Wms360-Demo!';
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
-const DAY = 24 * HOUR;
 
 // ------------------------------------------------------------------ master data
 
@@ -141,6 +140,8 @@ const USERS: DbUser[] = [
   ['usr-rohit', 'Rohit Verma', 'rohit.verma@wms360.com', 'role-picker', ['wh-mum']],
   ['usr-anil', 'Anil Gupta', 'anil.gupta@wms360.com', 'role-wm', ['wh-del']],
   ['usr-deepak', 'Deepak Reddy', 'deepak.reddy@wms360.com', 'role-wm', ['wh-blr']],
+  ['usr-meera', 'Meera Joshi', 'meera.joshi@wms360.com', 'role-seller', []],
+  ['usr-vivek', 'Vivek Nair', 'vivek.nair@wms360.com', 'role-viewer', []],
 ].map(([id, name, email, roleId, warehouseIds]) => ({
   id: id as string,
   name: name as string,
@@ -482,6 +483,8 @@ export function seed(server: MockServer): void {
   db.movements.sort((a, b) => a.at.localeCompare(b.at));
   db.activity.sort((a, b) => b.at.localeCompare(a.at));
   db.notifications.sort((a, b) => b.at.localeCompare(a.at));
-  db.notifications.forEach((n, i) => (n.read = i >= 5));
+  // The five newest are unread for everyone; older ones read by everyone.
+  const everyone = db.users.map((u) => u.id);
+  db.notifications.forEach((n, i) => (n.readBy = i >= 5 ? [...everyone] : []));
   for (const u of db.users) u.lastLoginAt = at(u.id === 'usr-admin' ? 1 : 30 + u.name.length * 17).toISOString();
 }

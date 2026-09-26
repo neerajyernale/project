@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, NgModule } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
+
+import { SharedModule } from '@wms/design-system';
 
 @Component({
   selector: 'wms-forbidden',
@@ -50,8 +53,28 @@ export class NotFoundComponent {}
   styles: ['.status-page { margin-top: 40px; } .status-page .btn { margin-top: 12px; }'],
 })
 export class UnavailableComponent {
+  constructor(private readonly router: Router) {}
+
   retry(): void {
-    window.history.back();
-    setTimeout(() => window.location.reload(), 50);
+    // Shown in place (a remote that failed to load) or at /unavailable (a chunk that failed mid-session).
+    if (this.router.url.startsWith('/unavailable')) {
+      window.history.back();
+      setTimeout(() => window.location.reload(), 50);
+    } else {
+      window.location.reload();
+    }
   }
 }
+
+@NgModule({
+  declarations: [UnavailableComponent],
+  imports: [SharedModule],
+  exports: [UnavailableComponent],
+})
+export class UnavailablePageModule {}
+
+/** Stands in for a remote that failed to load, so its URLs show the "unavailable" page. */
+@NgModule({
+  imports: [UnavailablePageModule, RouterModule.forChild([{ path: '**', component: UnavailableComponent, title: 'Unavailable · WMS360' }])],
+})
+export class RemoteUnavailableModule {}

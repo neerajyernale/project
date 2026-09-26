@@ -1,4 +1,4 @@
-import { Alert, DashboardSummary, ORDER_STATUSES, ReportColumn, ReportDefinition, ReportResult, SearchResult } from '@core/models';
+import { Alert, DashboardSummary, ORDER_STATUSES, ReportColumn, ReportDefinition, ReportResult, SearchResult } from '@wms/core';
 import { notFound } from '../mock-types';
 import { MockServer } from '../mock-server';
 
@@ -138,8 +138,15 @@ export function registerInsightRoutes(s: MockServer): void {
         capacity: { usedUnits, capacityUnits, pct: capacityPct },
         ordersByDay,
         orderStatus: ORDER_STATUSES.map((status) => ({ status, count: orders.filter((o) => o.status === status).length })).filter((x) => x.count > 0),
-        alerts,
-        activity: s.db.activity.filter((a) => a.warehouseId === null ? !ctx.query.get('warehouseId') && !ctx.warehouseContext : inScope(a.warehouseId)).slice(0, 8),
+        // Only alerts the user can act on: each links to a page they are allowed to open.
+        alerts: alerts.filter((a) => {
+          const need = a.link.startsWith('/orders') ? 'orders:view' : a.link.startsWith('/warehouses') ? 'warehouses:view' : a.link.startsWith('/inventory') ? 'inventory:view' : a.link.startsWith('/shipping') ? 'shipping:view' : a.link.startsWith('/inbound') ? 'inbound:view' : null;
+          return !need || ctx.perms.has(need);
+        }),
+        activity: s.db.activity
+          .filter((a) => a.kind !== 'admin' || ctx.perms.has('users:view'))
+          .filter((a) => (a.warehouseId === null ? !ctx.query.get('warehouseId') && !ctx.warehouseContext : inScope(a.warehouseId)))
+          .slice(0, 8),
         topProducts,
       };
       return summary;
@@ -150,7 +157,11 @@ export function registerInsightRoutes(s: MockServer): void {
   s.on('GET', '/activity', (ctx) => {
     const inScope = s.warehouseFilter(ctx);
     const kind = ctx.query.get('kind');
-    const rows = s.db.activity.filter((a) => (a.warehouseId === null ? true : inScope(a.warehouseId))).filter((a) => s.inList(a.kind, kind));
+    // Admin events (user invites, role changes) are visible only to people who manage access.
+    const rows = s.db.activity
+      .filter((a) => a.kind !== 'admin' || ctx.perms.has('users:view'))
+      .filter((a) => (a.warehouseId === null ? true : inScope(a.warehouseId)))
+      .filter((a) => s.inList(a.kind, kind));
     return s.paginate(rows, ctx.query, 'at,desc');
   });
 
@@ -209,7 +220,13 @@ export function registerInsightRoutes(s: MockServer): void {
     (ctx) => {
       const def = REPORTS.find((r) => r.key === ctx.params['key']);
       if (!def) throw notFound('Report');
-      const inScope = s.warehouseFilter({ ...ctx, query: new URLSearchParams(ctx.body['warehouseId'] ? { warehouseId: String(ctx.body['warehouseId']) } : {}) });
+      // The report's own filter decides: an empty warehouse means all the user may see,
+      // not the active warehouse from the header.
+      const inScope = s.warehouseFilter({
+        ...ctx,
+        warehouseContext: null,
+        query: new URLSearchParams(ctx.body['warehouseId'] ? { warehouseId: String(ctx.body['warehouseId']) } : {}),
+      });
       const from = ctx.body['from'] ? Date.parse(String(ctx.body['from'])) : 0;
       const to = ctx.body['to'] ? Date.parse(String(ctx.body['to'])) + DAY : Number.MAX_SAFE_INTEGER;
       const inPeriod = (iso: string | null) => !!iso && Date.parse(iso) >= from && Date.parse(iso) < to;

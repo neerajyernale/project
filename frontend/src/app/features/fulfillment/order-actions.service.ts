@@ -1,11 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { FulfillmentApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { Order } from '@core/models';
-import { ToastService } from '@core/notify/toast.service';
-import { DialogService } from '@shared/ui/dialogs';
+import { AuthSession, FulfillmentApi, Order, ToastService } from '@wms/core';
+import { DialogService } from '@wms/design-system';
 import { PackDialogComponent, ShipDialogComponent } from './fulfillment-dialogs';
 
 export interface OrderAction {

@@ -1,4 +1,4 @@
-import { Bin, Warehouse, ZONE_TYPES, Zone, ZoneType } from '@core/models';
+import { Bin, Warehouse, Zone, ZONE_TYPES, ZoneType } from '@wms/core';
 import { ApiException, DbBin, DbWarehouse, DbZone, conflict, notFound } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 
@@ -107,6 +107,10 @@ export function registerWarehouseRoutes(s: MockServer): void {
 
   /** Minimal list for pickers and context switchers — every signed-in user may call it. */
   s.on('GET', '/warehouses/options', (ctx) => {
+    // ?scope=network lists every active warehouse (e.g. transfer destinations); names only.
+    if (ctx.query.get('scope') === 'network') {
+      return s.db.warehouses.filter((w) => w.status === 'ACTIVE').map((w) => ({ id: w.id, code: w.code, name: w.name, city: w.city, status: w.status }));
+    }
     const allowed = s.allowedWarehouses(ctx.user);
     return s.db.warehouses
       .filter((w) => !allowed || allowed.has(w.id))

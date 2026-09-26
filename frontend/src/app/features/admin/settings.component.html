@@ -54,6 +54,7 @@
       <div class="row">
         <div class="row-label"><span class="label" id="s-aa-l">Auto-assign pickers</span><small>New pick tasks go to the available picker with the fewest open tasks.</small></div>
         <div class="row-control toggle-cell">
+          <!-- eslint-disable-next-line @angular-eslint/template/accessibility-elements-content -- named by aria-labelledby -->
           <button type="button" role="switch" class="toggle" aria-labelledby="s-aa-l" [attr.aria-checked]="form.controls.operations.controls.autoAssignPickers.value" [disabled]="!canEdit" (click)="form.controls.operations.controls.autoAssignPickers.setValue(!form.controls.operations.controls.autoAssignPickers.value); form.markAsDirty()"></button>
         </div>
       </div>
@@ -77,6 +78,7 @@
       ]">
         <div class="row-label"><span class="label" [id]="'n-' + n.key">{{ n.label }}</span><small>{{ n.hint }}</small></div>
         <div class="row-control toggle-cell">
+          <!-- eslint-disable-next-line @angular-eslint/template/accessibility-elements-content -- named by aria-labelledby -->
           <button type="button" role="switch" class="toggle" [attr.aria-labelledby]="'n-' + n.key" [attr.aria-checked]="$any(form.controls.notifications.controls)[n.key].value" [disabled]="!canEdit" (click)="$any(form.controls.notifications.controls)[n.key].setValue(!$any(form.controls.notifications.controls)[n.key].value); form.markAsDirty()"></button>
         </div>
       </div>
@@ -86,6 +88,7 @@
       <div class="row">
         <div class="row-label"><span class="label" id="s-2fa-l">Two-factor authentication</span><small>Required for administrators and managers.</small></div>
         <div class="row-control toggle-cell">
+          <!-- eslint-disable-next-line @angular-eslint/template/accessibility-elements-content -- named by aria-labelledby -->
           <button type="button" role="switch" class="toggle" aria-labelledby="s-2fa-l" [attr.aria-checked]="form.controls.security.controls.twoFactor.value" [disabled]="!canEdit" (click)="form.controls.security.controls.twoFactor.setValue(!form.controls.security.controls.twoFactor.value); form.markAsDirty()"></button>
         </div>
       </div>

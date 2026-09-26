@@ -1,4 +1,4 @@
-import { CARRIERS, Order, OrderLine, PACK_STATIONS, PRIORITIES, PickTask, Priority, Shipment } from '@core/models';
+import { CARRIERS, Order, OrderLine, PACK_STATIONS, PickTask, PRIORITIES, Priority, Shipment } from '@wms/core';
 import { DbOrder, DbPickLine, DbPickTask, Reservation, conflict, notFound } from '../mock-types';
 import { Ctx, MockServer } from '../mock-server';
 
@@ -53,6 +53,21 @@ export function registerFulfillmentRoutes(s: MockServer): void {
     { permission: 'orders:view' },
   );
 
+  /** Exact counts for KPI tiles (registered before /orders/:id so 'counts' is not taken as an id). */
+  s.on(
+    'GET',
+    '/orders/counts',
+    (ctx) => {
+      const inScope = s.warehouseFilter(ctx);
+      const stage = ctx.query.get('stage');
+      const rows = s.db.orders.filter((o) => inScope(o.warehouseId)).filter((o) => stage !== 'outbound' || OUTBOUND_STATES.includes(o.status)).map(toOrder);
+      const byStatus: Record<string, number> = {};
+      rows.forEach((o) => (byStatus[o.status] = (byStatus[o.status] ?? 0) + 1));
+      return { total: rows.length, delayed: rows.filter((o) => o.delayed).length, byStatus };
+    },
+    { permission: 'orders:view' },
+  );
+
   s.on('GET', '/orders/:id', (ctx) => toOrder(findOrder(ctx)), { permission: 'orders:view' });
 
   s.on(
@@ -70,6 +85,7 @@ export function registerFulfillmentRoutes(s: MockServer): void {
         [s.db.warehouses.some((w) => w.id === warehouseId && w.status === 'ACTIVE'), 'warehouseId', 'Choose an active warehouse.'],
         [PRIORITIES.includes(priority), 'priority', 'Choose a priority.'],
         [!Number.isNaN(Date.parse(requiredBy)), 'requiredBy', 'Enter the required-by date.'],
+        [Number.isNaN(Date.parse(requiredBy)) || Date.parse(requiredBy) > s.now().getTime() - 60 * 60 * 1000, 'requiredBy', 'The required-by date is in the past.'],
         [raw.length > 0, 'lines', 'Add at least one product.'],
         [raw.every((l) => Number.isInteger(Number(l.qty)) && Number(l.qty) > 0), 'lines', 'Quantities must be whole numbers above 0.'],
         [new Set(raw.map((l) => l.productId)).size === raw.length, 'lines', 'Each product may appear once.'],
@@ -302,6 +318,18 @@ export function registerFulfillmentRoutes(s: MockServer): void {
     { permission: 'picking:view' },
   );
 
+  s.on(
+    'GET',
+    '/pick-tasks/counts',
+    (ctx) => {
+      const inScope = s.warehouseFilter(ctx);
+      const byStatus: Record<string, number> = {};
+      s.db.pickTasks.filter((t) => inScope(t.warehouseId)).forEach((t) => (byStatus[t.status] = (byStatus[t.status] ?? 0) + 1));
+      return { byStatus };
+    },
+    { permission: 'picking:view' },
+  );
+
   s.on('GET', '/pick-tasks/:id', (ctx) => toTask(findTask(ctx)), { permission: 'picking:view' });
 
   s.on(
@@ -311,7 +339,12 @@ export function registerFulfillmentRoutes(s: MockServer): void {
       const t = findTask(ctx);
       if (!['PENDING', 'ASSIGNED'].includes(t.status)) throw conflict(`${t.number} is already ${t.status.toLowerCase().replace('_', ' ')}.`);
       const picker = s.str(ctx.body['picker']);
-      s.validate([[s.db.users.some((u) => u.name === picker && u.status === 'ACTIVE'), 'picker', 'Choose a picker.']]);
+      const person = s.db.users.find((u) => u.name === picker && u.status === 'ACTIVE');
+      s.validate([
+        [!!person, 'picker', 'Choose a picker.'],
+        [!!person && s.permissionsOf(person).includes('picking:edit'), 'picker', `${picker} is not allowed to pick.`],
+        [!!person && (person.warehouseIds.length === 0 || person.warehouseIds.includes(t.warehouseId)), 'picker', `${picker} does not work in ${t.warehouseName}.`],
+      ]);
       t.picker = picker;
       t.status = 'ASSIGNED';
       s.log('pick', 'info', `${t.number} assigned`, picker, t.warehouseId, s.actor(ctx));
@@ -364,7 +397,7 @@ export function registerFulfillmentRoutes(s: MockServer): void {
       o.updatedAt = s.nowIso();
       if (short) {
         s.log('pick', 'warning', `Short pick on ${o.number}`, `${totalPicked} of ${o.totalQty} units found`, o.warehouseId, t.picker ?? s.actor(ctx));
-        s.notify('warning', 'Short pick', `${t.number} for ${o.number}: ${totalPicked} of ${o.totalQty} units found`, `/orders/${o.id}`);
+        s.notify('warning', 'Short pick', `${t.number} for ${o.number}: ${totalPicked} of ${o.totalQty} units found`, `/orders/${o.id}`, { warehouseId: o.warehouseId, permission: 'orders:view' });
       } else {
         s.log('pick', 'success', `Order ${o.number} picked successfully`, `Zone ${t.zone} · By ${t.picker ?? s.actor(ctx)}`, o.warehouseId, t.picker ?? s.actor(ctx));
       }
@@ -445,7 +478,7 @@ export function registerFulfillmentRoutes(s: MockServer): void {
       x.status = 'EXCEPTION';
       x.exceptionNote = note;
       s.log('ship', 'danger', `Delivery exception · ${x.number}`, note, x.warehouseId, s.actor(ctx));
-      s.notify('danger', 'Delivery exception', `${x.number} (${x.orderNumber}): ${note}`, `/shipping?q=${x.number}`, 'orderDelay');
+      s.notify('danger', 'Delivery exception', `${x.number} (${x.orderNumber}): ${note}`, `/shipping?q=${x.number}`, { setting: 'orderDelay', warehouseId: x.warehouseId, permission: 'shipping:view' });
       return x;
     },
     { permission: 'shipping:edit', status: 200 },

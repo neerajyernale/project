@@ -82,6 +82,8 @@ export function browserServer(): MockServer {
   const server = db ? buildServer(db, persist) : seededServer(persist);
   server.cookieJar = storageCookieJar();
   if (!db) persist(server.db);
+  // Reads don't persist (too costly per request); save session activity when the page goes away.
+  window.addEventListener('pagehide', () => persist(server.db));
   return server;
 }
 

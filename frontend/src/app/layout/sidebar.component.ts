@@ -3,11 +3,8 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subject, merge } from 'rxjs';
 import { filter, map, startWith, switchMap, takeUntil } from 'rxjs/operators';
 
-import { FulfillmentApi } from '@core/api/domain-apis';
-import { AuthSession } from '@core/auth/auth-session.service';
-import { AppConfigService } from '@core/config/app-config.service';
-import { WarehouseContext, WarehouseOption } from '@core/context/warehouse-context.service';
-import { DialogService } from '@shared/ui/dialogs';
+import { AppConfigService, AuthSession, FulfillmentApi, WarehouseContext, WarehouseOption } from '@wms/core';
+import { DialogService } from '@wms/design-system';
 import { MANAGE_NAV, NavItem, WORKSPACE_NAV } from './nav';
 
 @Component({

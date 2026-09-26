@@ -44,7 +44,7 @@ Approach: **strangler**. The new system is built in `/frontend` and `/backend`. 
 | Settings | `wms-admin` | 12 | Built on mock API |
 | Notifications popover | shell + `notification` module | 12 | Built on mock API |
 
-Status 2026-09-26: every screen is built in `/frontend` against the in-browser mock of `/api/v1` (see `frontend/README.md`). None is **superseded** yet. The rule in §1 also requires the real API, Module Federation and an E2E path.
+Status 2026-09-26: every screen is built in `/frontend` against the in-browser mock of `/api/v1` (see `frontend/README.md`), served by the shell through Module Federation from the 8 remotes, and covered by browser suites (workflows, role matrix, federation, accessibility). None is **superseded** yet: the rule in §1 also requires the real API.
 
 ## 4. Seed data conversion
 
