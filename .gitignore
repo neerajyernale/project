@@ -1,5 +1,10 @@
 .angular
-dist
 node_modules
+# Build output is ignored, except frontend/dist/deploy: the Node 16 build that Vercel serves as-is
+# (Vercel no longer builds on Node 16). Refresh it with `npm run build` before pushing a release.
+/dist
+frontend/dist/*
+!frontend/dist/deploy/
+frontend/dist/deploy/.vercel
 .env
 frontend/e2e/output
