@@ -1,0 +1,10 @@
+{
+  "dashboard": "/mfe/dashboard/remoteEntry.js",
+  "warehouse": "/mfe/warehouse/remoteEntry.js",
+  "catalog": "/mfe/catalog/remoteEntry.js",
+  "inventory": "/mfe/inventory/remoteEntry.js",
+  "inbound": "/mfe/inbound/remoteEntry.js",
+  "fulfillment": "/mfe/fulfillment/remoteEntry.js",
+  "reports": "/mfe/reports/remoteEntry.js",
+  "admin": "/mfe/admin/remoteEntry.js"
+}
