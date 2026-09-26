@@ -58,6 +58,18 @@ Data changes persist in the browser's localStorage. **Sidebar → Demo data → 
 
 Every data page renders one of the seven page states: loading, ready, empty, no results, error, forbidden or offline (`ARCHITECTURE.md` §3.3).
 
+## Deploy (Vercel)
+
+The build runs on your machine with Node 16; Vercel only serves the files (it no longer offers Node 16 for builds).
+
+```bash
+npm run build           # builds shell + 8 remotes and assembles dist/deploy
+npm run serve:dist      # optional: check it at http://localhost:8080 with the same rules Vercel uses
+npm run deploy:vercel   # uploads dist/deploy (Vercel CLI 28, the last line that runs on Node 16)
+```
+
+The first deploy asks you to log in and to create or link a Vercel project; the link is kept in `dist/deploy/.vercel`. `dist/deploy` contains the shell at `/`, each remote at `/mfe/<name>/`, the remote manifest, and a `vercel.json` with the SPA fallback and security headers. The deployed app runs on the in-browser mock API (`assets/config/app-config.json`) until the backend exists.
+
 ## Structure
 
 ```

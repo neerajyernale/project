@@ -13,6 +13,7 @@
     "build": "node scripts/build-all.mjs",
     "build:dev": "ng build shell --configuration development",
     "serve:dist": "node scripts/serve-dist.mjs",
+    "deploy:vercel": "npx vercel@28.20.0 deploy dist/deploy --prod",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --coverage",

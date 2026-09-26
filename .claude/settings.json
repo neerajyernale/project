@@ -18,7 +18,14 @@
       "PowerShell(node C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Angular-project\\\\eff677f8-dda0-4e22-ace2-9d798229c672\\\\scratchpad\\\\contrast.mjs)",
       "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Start-Sleep 12; $env:WMS_URL='http://localhost:4210'; node e2e/a11y.mjs 2>&1; \"exit: $LASTEXITCODE\")",
       "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Remove-Item e2e\\\\_contrast.mjs; Start-Sleep 15; $env:WMS_URL='http://localhost:4210'; node e2e/a11y.mjs 2>&1; \"exit: $LASTEXITCODE\")",
-      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:WMS_URL='http://localhost:8080'; node e2e/run-all.mjs 2>&1 | Select-String -Pattern '===|problems|✗|errors:|scenarios|checks|audited'; \"exit: $LASTEXITCODE\")"
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $env:WMS_URL='http://localhost:8080'; node e2e/run-all.mjs 2>&1 | Select-String -Pattern '===|problems|✗|errors:|scenarios|checks|audited'; \"exit: $LASTEXITCODE\")",
+      "PowerShell(Get-ChildItem C:\\\\nvm4w, $env:LOCALAPPDATA\\\\nvm, $env:APPDATA\\\\nvm -Directory -ErrorAction SilentlyContinue | Select-Object FullName; Get-ChildItem -Path C:\\\\nvm4w, $env:LOCALAPPDATA\\\\nvm, $env:APPDATA\\\\nvm -Recurse -Filter node.exe -Depth 2 -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; $n='C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\nvm\\\\v24.18.0\\\\node.exe'; & $n -v; cmd /c \"`\"$n`\" node_modules/@angular/cli/bin/ng.js build mfe-inventory 2>&1\" | Select-Object -Last 12)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Remove-Item -Recurse -Force .angular\\\\cache -ErrorAction SilentlyContinue; $env:Path = 'C:\\\\Users\\\\Neeraj\\\\AppData\\\\Local\\\\nvm\\\\v24.18.0;' + $env:Path; node -v; node scripts/build-all.mjs 2>&1 | Select-String 'Node.js version|not supported|Warning|ERROR|Error:|===|Built and verified|check failed' | Select-Object -First 30)",
+      "PowerShell(npm view vercel@latest version engines --json 2>&1)",
+      "PowerShell(npm view vercel@28 version engines --json 2>&1)",
+      "PowerShell(cd D:\\\\Angular\\\\project\\\\frontend; Start-Sleep 2; Get-Content dist\\\\deploy\\\\assets\\\\config\\\\app-config.json; $env:WMS_URL='http://localhost:8080'; node e2e/run-all.mjs 2>&1 | Select-String -Pattern '===|problems|✗|errors:|scenarios|checks|audited'; \"exit: $LASTEXITCODE\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; cd D:\\\\Angular\\\\project\\\\frontend; node -e \"const fs=require\\('fs'\\);const p=JSON.parse\\(fs.readFileSync\\('package.json','utf8'\\)\\);const s=p.scripts;p.scripts={};for\\(const [k,v] of Object.entries\\(s\\)\\){p.scripts[k]=v;if\\(k==='serve:dist'\\)p.scripts['deploy:vercel']='npx vercel@28.20.0 deploy dist/deploy --prod'}fs.writeFileSync\\('package.json',JSON.stringify\\(p,null,2\\)+'\\\\n'\\);console.log\\(p.scripts['deploy:vercel']\\)\")"
     ]
   }
 }

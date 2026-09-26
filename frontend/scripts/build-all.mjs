@@ -37,3 +37,6 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(`\nBuilt and verified: ${projects.join(', ')}`);
+
+// A full build also produces the deployable site (dist/deploy).
+if (!wanted.length) execFileSync(process.execPath, [join(workspace, 'scripts', 'assemble-deploy.mjs')], { stdio: 'inherit' });
