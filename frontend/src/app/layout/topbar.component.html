@@ -1,0 +1,92 @@
+<header class="topbar">
+  <button *ngIf="mobile" type="button" class="icon-btn" (click)="openMenu.emit()" aria-label="Open navigation">
+    <wms-icon name="menu" [size]="20"></wms-icon>
+  </button>
+
+  <div class="search" (wmsClickOutside)="results = null" role="search">
+    <div class="search-field">
+      <wms-icon name="search" [size]="18"></wms-icon>
+      <input
+        #searchInput
+        type="search"
+        [formControl]="search"
+        placeholder="Search products, orders, warehouses…"
+        aria-label="Search"
+        autocomplete="off"
+        role="combobox"
+        aria-controls="search-results"
+        [attr.aria-expanded]="!!results"
+        [attr.aria-activedescendant]="activeResult >= 0 ? 'sr-' + activeResult : null"
+        (keydown)="onSearchKey($event)"
+      />
+      <kbd *ngIf="!mobile">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+    </div>
+    <div class="menu search-results" *ngIf="results || searching" id="search-results" role="listbox" aria-label="Search results">
+      <div class="search-note" *ngIf="searching && !results">Searching…</div>
+      <div class="search-note" *ngIf="results && !results.length">No matches for “{{ search.value }}”</div>
+      <button
+        *ngFor="let r of results; let i = index"
+        type="button"
+        role="option"
+        [id]="'sr-' + i"
+        [class.active]="i === activeResult"
+        [attr.aria-selected]="i === activeResult"
+        (mouseenter)="activeResult = i"
+        (click)="open(r)"
+      >
+        <span class="result-icon"><wms-icon [name]="searchIcons[r.type]"></wms-icon></span>
+        <span class="result-text"><strong>{{ r.title }}</strong><small>{{ r.subtitle }}</small></span>
+        <span class="result-type">{{ r.type }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="icon-btn outlined" (click)="showShortcuts()" aria-label="Help and keyboard shortcuts">
+      <wms-icon name="help" [size]="18"></wms-icon>
+    </button>
+
+    <div class="pop-wrap" (wmsClickOutside)="notificationsOpen = false">
+      <button type="button" class="icon-btn" (click)="toggleNotifications()" [attr.aria-expanded]="notificationsOpen" [attr.aria-label]="'Notifications, ' + unread + ' unread'">
+        <wms-icon name="bell" [size]="20"></wms-icon>
+        <span class="dot" *ngIf="unread > 0">{{ unread > 9 ? '9+' : unread }}</span>
+      </button>
+      <section class="menu notif-pop" *ngIf="notificationsOpen" aria-label="Notifications">
+        <header class="pop-head">
+          <strong>Notifications</strong>
+          <button type="button" class="link-btn" (click)="markAllRead()" [disabled]="!unread">Mark all read</button>
+        </header>
+        <div class="pop-empty" *ngIf="!notifications.length">You're all caught up.</div>
+        <button type="button" class="notif" *ngFor="let n of notifications; trackBy: trackById" [class.unread]="!n.read" (click)="openNotification(n)">
+          <span class="ndot" [ngClass]="'t-' + n.tone" aria-hidden="true"></span>
+          <span class="ntext">
+            <strong>{{ n.title }}</strong>
+            <small>{{ n.detail }}</small>
+            <time [attr.datetime]="n.at">{{ n.at | relTime }}</time>
+          </span>
+          <span class="sr-only" *ngIf="!n.read">Unread</span>
+        </button>
+      </section>
+    </div>
+
+    <div class="pop-wrap" (wmsClickOutside)="profileOpen = false">
+      <button type="button" class="profile-btn" (click)="toggleProfile()" [attr.aria-expanded]="profileOpen" aria-haspopup="menu" aria-label="Account menu">
+        <span class="avatar">{{ user?.name | initials }}</span>
+        <span class="profile-text" *ngIf="!mobile"><strong>{{ user?.name }}</strong><small>{{ user?.roleName }}</small></span>
+        <wms-icon *ngIf="!mobile" name="chevron-down"></wms-icon>
+      </button>
+      <div class="menu profile-menu" *ngIf="profileOpen" role="menu">
+        <div class="who">
+          <strong>{{ user?.name }}</strong>
+          <small>{{ user?.email }}</small>
+          <small>{{ user?.roleName }} · {{ user?.warehouseIds?.length ? user?.warehouseIds?.length + ' warehouse(s)' : 'All warehouses' }}</small>
+        </div>
+        <hr />
+        <a *wmsCan="'settings:view'" routerLink="/settings" role="menuitem" (click)="profileOpen = false"><wms-icon name="settings"></wms-icon>Settings</a>
+        <button type="button" role="menuitem" (click)="changePassword()"><wms-icon name="key"></wms-icon>Change password</button>
+        <hr />
+        <button type="button" role="menuitem" (click)="signOut()"><wms-icon name="logout"></wms-icon>Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>

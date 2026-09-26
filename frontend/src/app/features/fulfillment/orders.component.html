@@ -1,0 +1,96 @@
+<ng-container *ngIf="list.state$ | async as s">
+  <section class="page-header">
+    <div>
+      <div class="eyebrow">Fulfillment · {{ (context.active$ | async)?.name || 'All warehouses' }}</div>
+      <h1>{{ outbound ? 'Outbound' : 'Orders' }}</h1>
+      <p>{{ outbound ? 'Orders moving from allocation to dispatch.' : 'Customer orders through every fulfillment stage.' }}</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" class="btn" (click)="export(s.page?.content ?? [])" [disabled]="!s.page?.content?.length"><wms-icon name="download"></wms-icon>Export</button>
+      <button *wmsCan="'orders:create'" type="button" class="btn btn-primary" (click)="create()"><wms-icon name="plus"></wms-icon>New order</button>
+    </div>
+  </section>
+
+  <section class="kpi-strip" *ngIf="counts$ | async as c">
+    <ng-container *ngIf="!outbound; else outboundKpis">
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'CREATED')"><span class="tone-icon tone-navy"><wms-icon name="orders"></wms-icon></span><div><strong>{{ c.created }}</strong><small>Awaiting allocation</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'ALLOCATED,PICKING,PICKED,PACKED')"><span class="tone-icon tone-blue"><wms-icon name="picking"></wms-icon></span><div><strong>{{ c.inFlight }}</strong><small>In fulfillment</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('delayed', 'true')"><span class="tone-icon tone-red"><wms-icon name="clock"></wms-icon></span><div><strong>{{ c.delayed }}</strong><small>Past required date</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'SHIPPED,DELIVERED')"><span class="tone-icon tone-green"><wms-icon name="shipping"></wms-icon></span><div><strong>{{ c.shipped }}</strong><small>Shipped or delivered</small></div></button>
+    </ng-container>
+    <ng-template #outboundKpis>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'ALLOCATED')"><span class="tone-icon tone-navy"><wms-icon name="layers"></wms-icon></span><div><strong>{{ c.allocated }}</strong><small>Allocated, to release</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'PICKING')"><span class="tone-icon tone-orange"><wms-icon name="picking"></wms-icon></span><div><strong>{{ c.picking }}</strong><small>Being picked</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'PICKED')"><span class="tone-icon tone-blue"><wms-icon name="packing"></wms-icon></span><div><strong>{{ c.picked }}</strong><small>Picked, to pack</small></div></button>
+      <button type="button" class="kpi-tile as-btn" (click)="list.setFilter('status', 'PACKED')"><span class="tone-icon tone-green"><wms-icon name="shipping"></wms-icon></span><div><strong>{{ c.packed }}</strong><small>Packed, to dispatch</small></div></button>
+    </ng-template>
+  </section>
+
+  <section class="panel">
+    <div class="table-controls">
+      <label class="search-box"><wms-icon name="search"></wms-icon><span class="sr-only">Search orders</span>
+        <input type="search" placeholder="Search order, customer, city, SKU…" [value]="list.query.q" (input)="list.search($any($event.target).value)" />
+      </label>
+      <select class="filter-select" aria-label="Status" [value]="list.filter('status')" (change)="list.setFilter('status', $any($event.target).value)">
+        <option value="">All statuses</option>
+        <option *ngFor="let st of statuses" [value]="st">{{ st | humanize }}</option>
+        <option *ngIf="list.filter('status').includes(',')" [value]="list.filter('status')">Selected stages</option>
+      </select>
+      <select class="filter-select" aria-label="Priority" [value]="list.filter('priority')" (change)="list.setFilter('priority', $any($event.target).value)">
+        <option value="">Any priority</option>
+        <option *ngFor="let p of priorities" [value]="p">{{ p | humanize }}</option>
+      </select>
+      <label class="delayed-toggle"><input type="checkbox" [checked]="list.filter('delayed') === 'true'" (change)="list.setFilter('delayed', $any($event.target).checked ? 'true' : '')" /> Delayed only</label>
+      <button *ngIf="list.hasFilters" type="button" class="link-btn" (click)="list.clear()">Clear</button>
+      <span class="results-count" *ngIf="s.page">{{ s.page.totalElements }} orders</span>
+    </div>
+    <wms-state-view
+      *ngIf="s.status !== 'ready'"
+      [status]="s.status"
+      [error]="s.error"
+      entity="orders"
+      icon="orders"
+      [emptyTitle]="outbound ? 'Nothing in the outbound pipeline' : 'No orders yet'"
+      [actionLabel]="!outbound && session.can('orders:create') ? 'New order' : ''"
+      (action)="create()"
+      (retry)="list.reload()"
+      (clear)="list.clear()"
+    ></wms-state-view>
+    <div class="table-scroll" *ngIf="s.status === 'ready' && s.page" [style.opacity]="s.refreshing ? 0.6 : 1">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col"><button type="button" (click)="list.sortBy('number')">Order</button></th>
+            <th scope="col"><button type="button" (click)="list.sortBy('customerName')">Customer</button></th>
+            <th scope="col">Warehouse</th>
+            <th scope="col" class="num">Units</th>
+            <th scope="col">Priority</th>
+            <th scope="col"><button type="button" (click)="list.sortBy('createdAt')">Created</button></th>
+            <th scope="col"><button type="button" (click)="list.sortBy('requiredBy')">Required by</button></th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Next step</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let o of s.page.content; trackBy: trackById">
+            <td><a class="code" [routerLink]="['/orders', o.id]">{{ o.number }}</a></td>
+            <td><div class="cell-stack"><strong>{{ o.customerName }}</strong><small>{{ o.shipToCity }}</small></div></td>
+            <td>{{ o.warehouseName }}</td>
+            <td class="num">{{ o.totalQty | number }}</td>
+            <td><wms-status [value]="o.priority"></wms-status></td>
+            <td>{{ o.createdAt | wmsDate: 'datetime' }}</td>
+            <td>{{ o.requiredBy | wmsDate }}</td>
+            <td><wms-status [value]="o.status"></wms-status> <wms-status *ngIf="o.delayed" value="DELAYED"></wms-status></td>
+            <td>
+              <div class="row-actions">
+                <button *ngIf="primaryAction(o) as a" type="button" class="link-btn" (click)="run(o, a)">{{ a.label }}</button>
+                <a class="link-btn" [routerLink]="['/orders', o.id]">View</a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <wms-paginator *ngIf="s.status === 'ready'" [page]="s.page" (pageChange)="list.setPage($event)" (sizeChange)="list.setSize($event)"></wms-paginator>
+  </section>
+</ng-container>

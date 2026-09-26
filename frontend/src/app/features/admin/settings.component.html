@@ -1,0 +1,109 @@
+<section class="page-header">
+  <div>
+    <div class="eyebrow">Configuration</div>
+    <h1>Settings</h1>
+    <p>Workspace preferences, alert thresholds and security policy.</p>
+  </div>
+  <div class="page-actions" *ngIf="canEdit && status === 'ready'">
+    <button type="button" class="btn" (click)="reset()" [disabled]="!form.dirty || busy"><wms-icon name="undo"></wms-icon>Discard changes</button>
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!form.dirty || busy"><wms-icon name="check"></wms-icon>{{ busy ? 'Saving…' : 'Save changes' }}</button>
+  </div>
+</section>
+
+<div class="panel" *ngIf="status !== 'ready'"><wms-state-view [status]="status" [error]="null" entity="settings" (retry)="load()"></wms-state-view></div>
+
+<div class="layout" *ngIf="status === 'ready'" [formGroup]="form">
+  <nav class="side" aria-label="Settings sections">
+    <button *ngFor="let s of sections" type="button" [class.active]="s.key === active" [attr.aria-current]="s.key === active" (click)="active = s.key">
+      <wms-icon [name]="s.icon" [size]="16"></wms-icon>{{ s.label }}
+    </button>
+  </nav>
+
+  <article class="panel content">
+    <header class="content-head">
+      <span class="tone-icon tone-blue"><wms-icon [name]="section.icon"></wms-icon></span>
+      <div><h2>{{ section.label }}</h2><p>{{ section.hint }}</p></div>
+      <span class="chip" *ngIf="!canEdit">Read only</span>
+    </header>
+    <div class="inline-alert danger" *ngIf="banner" role="alert" style="margin: 16px 24px 0"><wms-icon name="alert-circle"></wms-icon><span>{{ banner }}</span></div>
+
+    <div class="rows" *ngIf="active === 'general'" formGroupName="general">
+      <div class="row">
+        <div class="row-label"><label for="s-company">Company name</label><small>Shown across the app and on exports.</small></div>
+        <div class="row-control"><input id="s-company" class="input" formControlName="companyName" /><wms-field-error [control]="form.controls.general.controls.companyName" label="Company name"></wms-field-error></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-cur">Currency</label><small>Used for inventory valuation.</small></div>
+        <div class="row-control"><select id="s-cur" class="select" formControlName="currency"><option value="INR">INR (₹)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-tz">Time zone</label><small>Default for reports and schedules.</small></div>
+        <div class="row-control"><select id="s-tz" class="select" formControlName="timezone"><option value="Asia/Kolkata">Asia/Kolkata (IST)</option><option value="Asia/Dubai">Asia/Dubai (GST)</option><option value="Europe/London">Europe/London</option><option value="America/New_York">America/New_York</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-df">Date format</label></div>
+        <div class="row-control"><select id="s-df" class="select" formControlName="dateFormat"><option>DD MMM YYYY</option><option>DD/MM/YYYY</option><option>YYYY-MM-DD</option></select></div>
+      </div>
+    </div>
+
+    <div class="rows" *ngIf="active === 'operations'" formGroupName="operations">
+      <div class="row">
+        <div class="row-label"><label for="s-dw">Default warehouse</label><small>Pre-selected for new orders and inbound shipments.</small></div>
+        <div class="row-control"><select id="s-dw" class="select" formControlName="defaultWarehouseId"><option *ngFor="let w of context.options$ | async" [value]="w.id">{{ w.name }}</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><span class="label" id="s-aa-l">Auto-assign pickers</span><small>New pick tasks go to the available picker with the fewest open tasks.</small></div>
+        <div class="row-control toggle-cell">
+          <button type="button" role="switch" class="toggle" aria-labelledby="s-aa-l" [attr.aria-checked]="form.controls.operations.controls.autoAssignPickers.value" [disabled]="!canEdit" (click)="form.controls.operations.controls.autoAssignPickers.setValue(!form.controls.operations.controls.autoAssignPickers.value); form.markAsDirty()"></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-cap">Capacity alert at</label><small>Warehouses above this bin utilization show on the dashboard.</small></div>
+        <div class="row-control"><select id="s-cap" class="select" formControlName="capacityAlertPct"><option *ngFor="let p of [70, 75, 80, 85, 90]" [ngValue]="p">{{ p }}%</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-buf">Reorder buffer</label><small>Reserved for early reorder warnings above the reorder level.</small></div>
+        <div class="row-control"><select id="s-buf" class="select" formControlName="lowStockBufferPct"><option *ngFor="let p of [0, 10, 20, 30]" [ngValue]="p">{{ p }}% above reorder level</option></select></div>
+      </div>
+    </div>
+
+    <div class="rows" *ngIf="active === 'notifications'" formGroupName="notifications">
+      <div class="row" *ngFor="let n of [
+        { key: 'lowStock', label: 'Low stock', hint: 'When an item drops to its reorder level in a warehouse.' },
+        { key: 'capacity', label: 'Capacity warnings', hint: 'When a warehouse passes the capacity alert threshold.' },
+        { key: 'orderDelay', label: 'Delivery problems', hint: 'When a shipment has an exception.' },
+        { key: 'inboundReminder', label: 'Inbound shipments', hint: 'When a new inbound shipment is scheduled.' },
+        { key: 'dailySummary', label: 'Daily summary email', hint: 'An operations summary at 08:00 (requires email delivery).' }
+      ]">
+        <div class="row-label"><span class="label" [id]="'n-' + n.key">{{ n.label }}</span><small>{{ n.hint }}</small></div>
+        <div class="row-control toggle-cell">
+          <button type="button" role="switch" class="toggle" [attr.aria-labelledby]="'n-' + n.key" [attr.aria-checked]="$any(form.controls.notifications.controls)[n.key].value" [disabled]="!canEdit" (click)="$any(form.controls.notifications.controls)[n.key].setValue(!$any(form.controls.notifications.controls)[n.key].value); form.markAsDirty()"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rows" *ngIf="active === 'security'" formGroupName="security">
+      <div class="row">
+        <div class="row-label"><span class="label" id="s-2fa-l">Two-factor authentication</span><small>Required for administrators and managers.</small></div>
+        <div class="row-control toggle-cell">
+          <button type="button" role="switch" class="toggle" aria-labelledby="s-2fa-l" [attr.aria-checked]="form.controls.security.controls.twoFactor.value" [disabled]="!canEdit" (click)="form.controls.security.controls.twoFactor.setValue(!form.controls.security.controls.twoFactor.value); form.markAsDirty()"></button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-to">Session timeout</label><small>Signed-in sessions expire after this much inactivity.</small></div>
+        <div class="row-control"><select id="s-to" class="select" formControlName="sessionTimeoutMin"><option *ngFor="let m of [15, 30, 60, 120]" [ngValue]="m">{{ m < 60 ? m + ' minutes' : m / 60 + ' hour' + (m > 60 ? 's' : '') }}</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-pw">Minimum password length</label></div>
+        <div class="row-control"><select id="s-pw" class="select" formControlName="passwordMinLength"><option *ngFor="let n of [10, 12, 14, 16]" [ngValue]="n">{{ n }} characters</option></select></div>
+      </div>
+      <div class="row">
+        <div class="row-label"><label for="s-ip">IP allowlist</label><small>One IP or CIDR range per line. Empty allows all.</small></div>
+        <div class="row-control">
+          <textarea id="s-ip" class="textarea code" rows="4" formControlName="ipAllowlist"></textarea>
+          <wms-field-error [control]="form.controls.security.controls.ipAllowlist" label="IP allowlist"></wms-field-error>
+        </div>
+      </div>
+    </div>
+  </article>
+</div>

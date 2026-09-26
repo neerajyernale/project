@@ -1,0 +1,100 @@
+/*
+ * WMS360 design tokens. Seeded from the prototype palette (PROTOTYPE_AUDIT §11).
+ * Components use tokens only — no literal colours outside this file.
+ */
+:root {
+  /* Navigation */
+  --wms-nav-bg: #081525;
+  --wms-nav-surface: rgba(255, 255, 255, 0.04);
+  --wms-nav-border: rgba(255, 255, 255, 0.08);
+  --wms-nav-text: #9eafc1;
+  --wms-nav-text-strong: #f3f7fb;
+  --wms-nav-caption: #637b96;
+  --wms-nav-active: #1b66bd;
+  --wms-nav-active-edge: #69b4ff;
+  --wms-brand-accent: #50a1f3;
+
+  /* Surfaces */
+  --wms-bg: #f6f8fb;
+  --wms-surface: #ffffff;
+  --wms-surface-muted: #f6f8fb;
+  --wms-surface-hover: #fbfcfe;
+  --wms-border: #e1e7ee;
+  --wms-border-strong: #d9e1ea;
+  --wms-divider: #edf1f4;
+
+  /* Text */
+  --wms-text: #16253a;
+  --wms-text-body: #4c5d71;
+  --wms-text-muted: #728196;
+  --wms-text-subtle: #8895a4;
+  --wms-text-faint: #a0acb9;
+
+  /* Brand + semantic */
+  --wms-primary: #176bd1;
+  --wms-primary-hover: #1458b8;
+  --wms-primary-soft: #e9f3ff;
+  --wms-primary-text: #1664bd;
+  /*
+   * Chart series, fixed order (validated: scripts/validate_palette, light, surface #fff).
+   * Slots 3–4 are below 3:1 contrast, so every chart ships a legend and a table view.
+   */
+  --wms-series-1: #2a78d6;
+  --wms-series-2: #eb6834;
+  --wms-series-3: #1baf7a;
+  --wms-series-4: #eda100;
+  --wms-chart-grid: #e9eef3;
+  --wms-chart-axis: #c9d2dc;
+  --wms-chart-track: #e4ebf3;
+  --wms-chart-1: #287bd4;
+
+  --wms-success: #16855c;
+  --wms-success-soft: #e8f7f0;
+  --wms-warning: #b8620f;
+  --wms-warning-soft: #fff3e4;
+  --wms-warning-fill: #e8a453;
+  --wms-danger: #c53b46;
+  --wms-danger-soft: #fff0f0;
+  --wms-info: #3375b9;
+  --wms-info-soft: #eaf2fb;
+  --wms-neutral: #64748b;
+  --wms-neutral-soft: #edf0f4;
+
+  --wms-focus-ring: 0 0 0 3px rgba(40, 123, 212, 0.28);
+  --wms-overlay: rgba(8, 21, 37, 0.55);
+
+  /* Type */
+  --wms-font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --wms-font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --wms-text-2xs: 10px;
+  --wms-text-xs: 11px;
+  --wms-text-sm: 12px;
+  --wms-text-md: 13px;
+  --wms-text-base: 14px;
+  --wms-text-lg: 16px;
+  --wms-text-xl: 20px;
+  --wms-text-2xl: 26px;
+
+  /* Space (4px grid) */
+  --wms-space-1: 4px;
+  --wms-space-2: 8px;
+  --wms-space-3: 12px;
+  --wms-space-4: 16px;
+  --wms-space-5: 20px;
+  --wms-space-6: 24px;
+  --wms-space-8: 32px;
+
+  /* Shape */
+  --wms-radius-sm: 4px;
+  --wms-radius: 6px;
+  --wms-radius-lg: 8px;
+  --wms-radius-pill: 999px;
+  --wms-shadow-pop: 0 15px 35px rgba(20, 42, 68, 0.14);
+  --wms-shadow-dialog: 0 20px 60px rgba(8, 21, 37, 0.3);
+
+  /* Layout */
+  --wms-sidebar-w: 248px;
+  --wms-sidebar-w-collapsed: 76px;
+  --wms-topbar-h: 72px;
+  --wms-content-max: 1600px;
+}

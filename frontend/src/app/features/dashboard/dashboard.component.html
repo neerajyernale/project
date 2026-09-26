@@ -1,0 +1,162 @@
+<ng-container *ngIf="view$ | async as v">
+  <section class="page-header">
+    <div>
+      <div class="eyebrow">Operations center · {{ today | wmsDate }}</div>
+      <h1>Warehouse overview</h1>
+      <p>{{ v.active ? v.active.name : 'All warehouses' }} · what needs attention today.</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" class="btn" (click)="refresh()" [disabled]="v.state.status === 'loading'">
+        <wms-icon name="refresh"></wms-icon>Refresh
+      </button>
+      <a *wmsCan="'orders:create'" class="btn btn-primary" routerLink="/orders" [queryParams]="{ new: 1 }"><wms-icon name="plus"></wms-icon>New order</a>
+    </div>
+  </section>
+
+  <div class="panel" *ngIf="v.state.status !== 'ready' && v.state.status !== 'loading'">
+    <wms-state-view [status]="v.state.status" [error]="v.state.error" entity="the dashboard" (retry)="refresh()"></wms-state-view>
+  </div>
+
+  <ng-container *ngIf="v.state.status === 'loading' && !v.vm">
+    <div class="kpi-grid">
+      <div class="kpi skeleton-tile" *ngFor="let i of [1, 2, 3, 4, 5, 6]"><span class="skeleton"></span><span class="skeleton"></span></div>
+    </div>
+    <div class="panel"><wms-state-view status="loading" [rows]="6"></wms-state-view></div>
+  </ng-container>
+
+  <ng-container *ngIf="v.vm as vm">
+    <p class="updated">Figures as of {{ vm.summary.generatedAt | wmsDate: 'time' }}</p>
+
+    <section class="kpi-grid" aria-label="Key figures">
+      <ng-container *ngFor="let k of vm.kpis; trackBy: trackByLabel">
+        <a *ngIf="can(k.permission); else plainTile" class="kpi" [routerLink]="k.link" [queryParams]="k.queryParams">
+          <span class="tone-icon" [ngClass]="k.tone"><wms-icon [name]="k.icon" [size]="17"></wms-icon></span>
+          <strong class="kpi-value">{{ k.value }}</strong>
+          <span class="kpi-label">{{ k.label }}</span>
+          <small class="kpi-hint">{{ k.hint }}</small>
+        </a>
+        <ng-template #plainTile>
+          <div class="kpi">
+            <span class="tone-icon" [ngClass]="k.tone"><wms-icon [name]="k.icon" [size]="17"></wms-icon></span>
+            <strong class="kpi-value">{{ k.value }}</strong>
+            <span class="kpi-label">{{ k.label }}</span>
+            <small class="kpi-hint">{{ k.hint }}</small>
+          </div>
+        </ng-template>
+      </ng-container>
+    </section>
+
+    <section class="grid-main-side">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><h2>Stock by warehouse</h2><p>Units in bins, split by what they can be used for</p></div>
+        </div>
+        <div class="panel-body">
+          <wms-stacked-columns
+            [categories]="vm.stockCategories"
+            [series]="stockSeries"
+            [data]="vm.stockData"
+            categoryLabel="Warehouse"
+            ariaLabel="Stock by warehouse: available, reserved, damaged and inbound transfer units"
+          ></wms-stacked-columns>
+        </div>
+      </article>
+
+      <article class="panel capacity">
+        <div class="panel-heading"><div><h2>Capacity</h2><p>Bin space used across {{ v.active ? 'this warehouse' : 'all warehouses' }}</p></div></div>
+        <div class="panel-body">
+          <p class="hero">{{ vm.summary.capacity.pct }}<span>%</span></p>
+          <p class="hero-label">of bin capacity in use</p>
+          <wms-meter [value]="vm.summary.capacity.pct" [wide]="true" [warnAt]="75" [dangerAt]="90" label="Capacity used"></wms-meter>
+          <dl class="cap-figures">
+            <div><dt>Used</dt><dd class="num">{{ vm.summary.capacity.usedUnits | number }} units</dd></div>
+            <div><dt>Free</dt><dd class="num">{{ vm.freeUnits | number }} units</dd></div>
+            <div><dt>Total</dt><dd class="num">{{ vm.summary.capacity.capacityUnits | number }} units</dd></div>
+          </dl>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-main-side">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><h2>Orders, last 7 days</h2><p>{{ vm.receivedTotal | number }} received · {{ vm.shippedTotal | number }} shipped</p></div>
+          <a *wmsCan="'orders:view'" class="link-btn" routerLink="/orders">View orders →</a>
+        </div>
+        <div class="panel-body">
+          <wms-line-chart [labels]="vm.dayLabels" [series]="orderSeries" [data]="vm.orderData" xLabel="Day" ariaLabel="Orders received and shipped per day, last 7 days"></wms-line-chart>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Orders by status</h2><p>{{ vm.orderTotal | number }} orders in {{ v.active ? 'this warehouse' : 'all warehouses' }}</p></div></div>
+        <div class="panel-body">
+          <wms-bar-list [rows]="vm.orderStatus" ariaLabel="Order count by status"></wms-bar-list>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-main-side">
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Recent activity</h2><p>Latest changes in {{ v.active ? 'this warehouse' : 'your operation' }}</p></div></div>
+        <div class="feed" *ngIf="vm.summary.activity.length; else noActivity">
+          <div class="feed-row" *ngFor="let a of vm.summary.activity; trackBy: trackById">
+            <span class="dot-icon" [ngClass]="toneClass(a.tone)"><wms-icon [name]="activityIcon(a)" [size]="14"></wms-icon></span>
+            <div>
+              <strong>{{ a.title }}</strong>
+              <small>{{ a.detail }}{{ a.user && a.user !== 'System' ? ' · ' + a.user : '' }}</small>
+              <time [attr.datetime]="a.at">{{ a.at | relTime }}</time>
+            </div>
+          </div>
+        </div>
+        <ng-template #noActivity><wms-state-view status="empty" icon="activity" emptyTitle="No activity yet"></wms-state-view></ng-template>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div><h2>Needs attention</h2><p>Operational alerts</p></div>
+          <span class="count-pill" *ngIf="vm.summary.alerts.length">{{ vm.summary.alerts.length }}</span>
+        </div>
+        <div class="alerts" *ngIf="vm.summary.alerts.length; else allClear">
+          <div class="alert-row" *ngFor="let a of vm.summary.alerts; trackBy: trackById">
+            <span class="dot-icon" [ngClass]="toneClass(a.tone)"><wms-icon [name]="a.tone === 'info' ? 'inbound' : a.tone === 'danger' ? 'alert-circle' : 'alert'" [size]="14"></wms-icon></span>
+            <div class="alert-text"><strong>{{ a.title }}</strong><small>{{ a.detail }}</small></div>
+            <a class="btn btn-sm" [routerLink]="a.link" [queryParams]="a.queryParams">{{ a.action }}</a>
+          </div>
+        </div>
+        <ng-template #allClear>
+          <div class="state-view"><wms-icon class="state-icon" name="check-circle" [size]="28"></wms-icon><strong>All clear</strong><small>No delays, capacity or stock alerts right now.</small></div>
+        </ng-template>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><h2>Top moving products</h2><p>Units ordered in the last 30 days</p></div>
+        <a *wmsCan="'inventory:view'" class="link-btn" routerLink="/inventory">View inventory →</a>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" *ngIf="vm.summary.topProducts.length; else noTop">
+          <thead>
+            <tr><th scope="col">Product</th><th scope="col">SKU</th><th scope="col" class="num">Ordered</th><th scope="col" class="num">Available</th><th scope="col">Stock</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of vm.summary.topProducts">
+              <td>
+                <div class="avatar-cell">
+                  <span class="thumb">{{ p.name | initials }}</span>
+                  <div class="cell-stack"><strong>{{ p.name }}</strong><small>{{ p.category }}</small></div>
+                </div>
+              </td>
+              <td class="code">{{ p.sku }}</td>
+              <td class="num"><strong>{{ p.orderedQty | number }}</strong></td>
+              <td class="num">{{ p.available | number }}</td>
+              <td><wms-status [value]="p.stockStatus"></wms-status></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noTop><wms-state-view status="empty" icon="orders" emptyTitle="No orders in the last 30 days"></wms-state-view></ng-template>
+      </div>
+    </section>
+  </ng-container>
+</ng-container>

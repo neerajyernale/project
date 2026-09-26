@@ -1,0 +1,98 @@
+<ng-container *ngIf="list.state$ | async as s">
+  <section class="page-header">
+    <div>
+      <div class="eyebrow">Facilities</div>
+      <h1>Warehouses</h1>
+      <p>Manage facilities, capacity, zones and bins.</p>
+    </div>
+    <div class="page-actions">
+      <button type="button" class="btn" (click)="exportCsv(s.page?.content ?? [])" [disabled]="!s.page?.content?.length"><wms-icon name="download"></wms-icon>Export</button>
+      <button *wmsCan="'warehouses:create'" type="button" class="btn btn-primary" (click)="create()"><wms-icon name="plus"></wms-icon>Add warehouse</button>
+    </div>
+  </section>
+
+  <section class="kpi-strip" *ngIf="summary$ | async as k" aria-label="Summary">
+    <div class="kpi-tile"><span class="tone-icon tone-navy"><wms-icon name="warehouse"></wms-icon></span><div><strong>{{ k.total }}</strong><small>Warehouses</small></div></div>
+    <div class="kpi-tile"><span class="tone-icon tone-green"><wms-icon name="check-circle"></wms-icon></span><div><strong>{{ k.active }}</strong><small>Active</small></div></div>
+    <div class="kpi-tile"><span class="tone-icon tone-blue"><wms-icon name="grid"></wms-icon></span><div><strong>{{ k.util }}%</strong><small>Average bin utilization</small></div></div>
+    <div class="kpi-tile"><span class="tone-icon tone-red"><wms-icon name="alert"></wms-icon></span><div><strong>{{ k.hot }}</strong><small>At 80% or more</small></div></div>
+  </section>
+
+  <section class="panel">
+    <div class="table-controls">
+      <label class="search-box">
+        <wms-icon name="search"></wms-icon>
+        <span class="sr-only">Search warehouses</span>
+        <input type="search" placeholder="Search code, name, city, manager…" [value]="list.query.q" (input)="list.search($any($event.target).value)" />
+      </label>
+      <select class="filter-select" aria-label="City" [value]="list.filter('city')" (change)="list.setFilter('city', $any($event.target).value)">
+        <option value="">All cities</option>
+        <option *ngFor="let c of (summary$ | async)?.cities" [value]="c">{{ c }}</option>
+      </select>
+      <select class="filter-select" aria-label="Status" [value]="list.filter('status')" (change)="list.setFilter('status', $any($event.target).value)">
+        <option value="">All statuses</option>
+        <option value="ACTIVE">Active</option>
+        <option value="MAINTENANCE">Maintenance</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+      <button *ngIf="list.hasFilters" type="button" class="link-btn" (click)="list.clear()">Clear</button>
+      <span class="results-count" *ngIf="s.page" aria-live="polite">{{ s.page.totalElements }} warehouse{{ s.page.totalElements === 1 ? '' : 's' }}</span>
+    </div>
+
+    <wms-state-view
+      *ngIf="s.status !== 'ready'"
+      [status]="s.status"
+      [error]="s.error"
+      entity="warehouses"
+      icon="warehouse"
+      emptyTitle="No warehouses yet"
+      emptyHint="Add your first facility to start receiving stock."
+      [actionLabel]="session.can('warehouses:create') ? 'Add warehouse' : ''"
+      (retry)="list.reload()"
+      (clear)="list.clear()"
+      (action)="create()"
+    ></wms-state-view>
+
+    <div class="table-scroll" *ngIf="s.status === 'ready' && s.page" [style.opacity]="s.refreshing ? 0.6 : 1">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col" [attr.aria-sort]="list.sortDir('code') ? (list.sortDir('code') === 'asc' ? 'ascending' : 'descending') : null"><button type="button" (click)="list.sortBy('code')">Code</button></th>
+            <th scope="col"><button type="button" (click)="list.sortBy('name')">Warehouse</button></th>
+            <th scope="col"><button type="button" (click)="list.sortBy('city')">City</button></th>
+            <th scope="col">Manager</th>
+            <th scope="col" class="num"><button type="button" (click)="list.sortBy('capacityM2')">Floor area</button></th>
+            <th scope="col" class="num">Zones · bins</th>
+            <th scope="col"><button type="button" (click)="list.sortBy('utilization')">Utilization</button></th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let w of s.page.content; trackBy: trackById">
+            <td class="code">{{ w.code }}</td>
+            <td>
+              <div class="avatar-cell">
+                <span class="thumb">{{ w.city.charAt(0) }}</span>
+                <a [routerLink]="['/warehouses', w.id]"><strong>{{ w.name }}</strong></a>
+              </div>
+            </td>
+            <td>{{ w.city }}</td>
+            <td>{{ w.manager }}</td>
+            <td class="num">{{ w.capacityM2 | number }} m²</td>
+            <td class="num">{{ w.zoneCount }} · {{ w.binCount }}</td>
+            <td><wms-meter [value]="w.utilization" [warnAt]="80" [dangerAt]="90"></wms-meter></td>
+            <td><wms-status [value]="w.status"></wms-status></td>
+            <td>
+              <div class="row-actions">
+                <a class="link-btn" [routerLink]="['/warehouses', w.id]">View</a>
+                <button *wmsCan="'warehouses:edit'" type="button" class="link-btn" (click)="edit(w)">Edit</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <wms-paginator *ngIf="s.status === 'ready'" [page]="s.page" (pageChange)="list.setPage($event)" (sizeChange)="list.setSize($event)"></wms-paginator>
+  </section>
+</ng-container>

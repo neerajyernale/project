@@ -1,0 +1,86 @@
+<aside class="sidebar" [class.collapsed]="collapsed" [class.mobile]="mobile" aria-label="Main navigation">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+    <span class="brand-copy"><strong>WMS<span>360</span></strong><small>Warehouse operations</small></span>
+  </div>
+
+  <div class="switcher" (wmsClickOutside)="switcherOpen = false">
+    <button
+      type="button"
+      class="switcher-btn"
+      (click)="switcherOpen = !switcherOpen"
+      [attr.aria-expanded]="switcherOpen"
+      aria-haspopup="listbox"
+      [attr.aria-label]="'Active warehouse: ' + context.name(context.activeId) + '. Change'"
+    >
+      <span class="wh-dot" aria-hidden="true"></span>
+      <span class="switcher-text">
+        <small>ACTIVE WAREHOUSE</small>
+        <strong>{{ (context.active$ | async)?.name || 'All warehouses' }}</strong>
+      </span>
+      <wms-icon class="chev" name="chevron-down"></wms-icon>
+    </button>
+    <div class="menu switcher-menu" *ngIf="switcherOpen" role="listbox" aria-label="Warehouses">
+      <button *ngIf="context.canChooseAll" type="button" role="option" [attr.aria-selected]="context.activeId === null" (click)="choose(null)">
+        <wms-icon name="layers"></wms-icon> All warehouses
+        <wms-icon *ngIf="context.activeId === null" class="tick" name="check"></wms-icon>
+      </button>
+      <button
+        *ngFor="let w of context.options$ | async; trackBy: trackById"
+        type="button"
+        role="option"
+        [attr.aria-selected]="context.activeId === w.id"
+        (click)="choose(w.id)"
+      >
+        <wms-icon name="warehouse"></wms-icon>
+        <span class="opt-text"><span>{{ w.name }}</span><small>{{ w.code }}</small></span>
+        <wms-icon *ngIf="context.activeId === w.id" class="tick" name="check"></wms-icon>
+      </button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <p class="caption">WORKSPACE</p>
+    <a
+      *ngFor="let item of workspace; trackBy: trackByLink"
+      class="nav-item"
+      [routerLink]="item.link"
+      routerLinkActive="active"
+      [attr.title]="collapsed ? item.label : null"
+      (click)="navigate.emit()"
+    >
+      <wms-icon [name]="item.icon" [size]="18"></wms-icon>
+      <span class="nav-label">{{ item.label }}</span>
+      <span class="nav-count" *ngIf="item.badgeKey === 'openOrders' && openOrders > 0" [attr.aria-label]="openOrders + ' orders waiting'">{{ openOrders }}</span>
+    </a>
+    <ng-container *ngIf="manage.length">
+      <p class="caption secondary">MANAGE</p>
+      <a
+        *ngFor="let item of manage; trackBy: trackByLink"
+        class="nav-item"
+        [routerLink]="item.link"
+        routerLinkActive="active"
+        [attr.title]="collapsed ? item.label : null"
+        (click)="navigate.emit()"
+      >
+        <wms-icon [name]="item.icon" [size]="18"></wms-icon>
+        <span class="nav-label">{{ item.label }}</span>
+      </a>
+    </ng-container>
+  </nav>
+
+  <div class="footer">
+    <div class="data-note" *ngIf="usesMockApi">
+      <wms-icon name="info"></wms-icon>
+      <div class="data-text">
+        <strong>Demo data</strong>
+        <small>Stored in this browser</small>
+      </div>
+      <button type="button" class="link-btn" (click)="resetDemo()">Reset</button>
+    </div>
+    <button *ngIf="!mobile" type="button" class="collapse-btn" (click)="toggleCollapse.emit()" [attr.aria-label]="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+      <wms-icon [name]="collapsed ? 'sidebar-expand' : 'sidebar-collapse'" [size]="18"></wms-icon>
+      <span class="nav-label">Collapse sidebar</span>
+    </button>
+  </div>
+</aside>

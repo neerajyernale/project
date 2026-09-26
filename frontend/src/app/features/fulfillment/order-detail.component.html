@@ -1,0 +1,60 @@
+<ng-container *ngIf="state$ | async as s">
+  <nav class="breadcrumb" aria-label="Breadcrumb"><a routerLink="/orders">Orders</a><span aria-hidden="true">/</span><span aria-current="page">{{ s.data?.number || '…' }}</span></nav>
+  <div class="panel" *ngIf="s.status !== 'ready'">
+    <wms-state-view [status]="s.status" [error]="s.error" entity="this order" icon="orders" emptyTitle="Order not found" emptyHint="It may belong to a warehouse you can't access." (retry)="reload$.next()"></wms-state-view>
+  </div>
+
+  <ng-container *ngIf="s.data as o">
+    <section class="page-header">
+      <div>
+        <h1>{{ o.number }} <wms-status [value]="o.status"></wms-status> <wms-status *ngIf="o.delayed" value="DELAYED"></wms-status></h1>
+        <p>{{ o.customerName }} · ships from {{ o.warehouseName }} to {{ o.shipToCity || '—' }}</p>
+      </div>
+      <div class="page-actions">
+        <button *ngFor="let a of actions.available(o)" type="button" class="btn" [class.btn-primary]="a.primary" [class.btn-danger]="a.key === 'cancel'" (click)="run(o, a)">{{ a.label }}</button>
+      </div>
+    </section>
+
+    <div class="inline-alert info" *ngIf="justCreated && o.status === 'CREATED'" role="status">
+      <wms-icon name="check-circle"></wms-icon><span>Order created. Allocate stock to reserve it — allocation fails without changing anything if a line is short.</span>
+    </div>
+    <div class="inline-alert warning" *ngIf="shortBy(o) > 0" role="status">
+      <wms-icon name="alert"></wms-icon><span>Short-picked: {{ shortBy(o) }} unit{{ shortBy(o) === 1 ? '' : 's' }} were not found and are not in this shipment.</span>
+    </div>
+    <div class="inline-alert danger" *ngIf="o.status === 'CANCELLED'" role="status"><wms-icon name="ban"></wms-icon><span>This order was cancelled. Any reserved stock was released.</span></div>
+
+    <ol class="steps" aria-label="Order progress" *ngIf="o.status !== 'CANCELLED'">
+      <li *ngFor="let st of steps; let i = index" [class.done]="stepIndex(o) > i" [class.current]="stepIndex(o) === i" [attr.aria-current]="stepIndex(o) === i ? 'step' : null">
+        <span class="step-dot"><wms-icon *ngIf="stepIndex(o) > i" name="check" [size]="12"></wms-icon></span>{{ st | humanize }}
+      </li>
+    </ol>
+
+    <section class="stat-row">
+      <div class="stat"><span>Priority</span><wms-status [value]="o.priority"></wms-status></div>
+      <div class="stat"><span>Created</span><strong>{{ o.createdAt | wmsDate: 'datetime' }}</strong></div>
+      <div class="stat"><span>Required by</span><strong>{{ o.requiredBy | wmsDate }}</strong></div>
+      <div class="stat"><span>Pick task</span><strong><a *ngIf="o.pickTaskNumber; else dash" routerLink="/picking" [queryParams]="{ q: o.pickTaskNumber }" class="code">{{ o.pickTaskNumber }}</a></strong></div>
+      <div class="stat"><span>Package</span><strong class="code">{{ o.packageNumber || '—' }}</strong></div>
+      <div class="stat"><span>Shipment</span><strong><a *ngIf="o.shipmentNumber; else dash" routerLink="/shipping" [queryParams]="{ q: o.shipmentNumber }" class="code">{{ o.shipmentNumber }}</a></strong></div>
+    </section>
+    <ng-template #dash>—</ng-template>
+
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Lines</h2><p>{{ o.totalQty | number }} units ordered</p></div></div>
+      <div class="table-scroll" style="margin-top: 12px">
+        <table class="data-table">
+          <thead><tr><th scope="col">SKU</th><th scope="col">Product</th><th scope="col" class="num">Ordered</th><th scope="col" class="num">Reserved</th><th scope="col" class="num">Picked</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let l of o.lines">
+              <td class="code">{{ l.sku }}</td>
+              <td><strong>{{ l.productName }}</strong></td>
+              <td class="num">{{ l.qty | number }}</td>
+              <td class="num">{{ l.allocated | number }}</td>
+              <td class="num"><span [class.short]="shortBy(o) > 0 && l.picked < l.qty">{{ l.picked | number }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</ng-container>

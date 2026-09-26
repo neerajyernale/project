@@ -1,0 +1,76 @@
+<div class="login-page">
+  <section class="login-left" aria-label="About WMS360">
+    <div class="login-brand">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <div>
+        <p class="brand-name">WMS<span>360</span></p>
+        <p class="brand-tag">Warehouse management</p>
+      </div>
+    </div>
+    <div class="login-hero">
+      <h1>Enterprise warehouse<br />operations, unified.</h1>
+      <p>Track stock across every warehouse, run receiving, picking, packing and shipping, and see what needs attention today.</p>
+      <ul class="features">
+        <li><wms-icon name="inventory" [size]="18"></wms-icon><div><strong>Stock you can trust</strong><small>Every movement recorded in one ledger</small></div></li>
+        <li><wms-icon name="orders" [size]="18"></wms-icon><div><strong>Order to delivery</strong><small>Allocate, pick, pack and ship in one flow</small></div></li>
+        <li><wms-icon name="reports" [size]="18"></wms-icon><div><strong>Operational reports</strong><small>Utilization, throughput and supplier fill rate</small></div></li>
+      </ul>
+    </div>
+    <p class="login-foot">© {{ 2026 }} WMS360 Logistics</p>
+  </section>
+
+  <main class="login-right">
+    <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate aria-labelledby="login-title">
+      <h2 id="login-title">Sign in to your account</h2>
+      <p class="sub">Use your work email and password.</p>
+
+      <div class="inline-alert warning" *ngIf="expired && !error" role="status">
+        <wms-icon name="clock"></wms-icon><span>Your session ended. Sign in again to continue where you left off.</span>
+      </div>
+      <div class="inline-alert danger" *ngIf="error" role="alert">
+        <wms-icon name="alert-circle"></wms-icon>
+        <div><strong>Couldn't sign in.</strong> {{ error }}</div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email address</label>
+        <div class="input-icon">
+          <wms-icon name="user"></wms-icon>
+          <input id="email" class="input" type="email" formControlName="email" autocomplete="username" placeholder="name@company.com" wmsAutofocus />
+        </div>
+        <wms-field-error [control]="form.controls.email" label="Email"></wms-field-error>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-icon">
+          <wms-icon name="lock"></wms-icon>
+          <input id="password" class="input" [type]="showPassword ? 'text' : 'password'" formControlName="password" autocomplete="current-password" />
+          <button type="button" class="reveal" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword">
+            <wms-icon [name]="showPassword ? 'eye-off' : 'eye'"></wms-icon>
+          </button>
+        </div>
+        <wms-field-error [control]="form.controls.password" label="Password"></wms-field-error>
+      </div>
+
+      <div class="options">
+        <label class="check"><input type="checkbox" formControlName="rememberMe" /> Keep me signed in for 7 days</label>
+        <button type="button" class="link-btn" (click)="forgotOpen = !forgotOpen" [attr.aria-expanded]="forgotOpen">Forgot password?</button>
+      </div>
+      <p class="forgot" *ngIf="forgotOpen" role="note">Ask your WMS360 administrator to reset it from Users &amp; Roles.</p>
+
+      <button type="submit" class="btn btn-primary submit" [disabled]="busy">
+        <span class="spinner" *ngIf="busy" aria-hidden="true"></span>{{ busy ? 'Signing in…' : 'Sign in' }}
+      </button>
+
+      <section class="demo" *ngIf="usesMockApi" aria-label="Demo accounts">
+        <p><strong>Demo accounts</strong> · password <code>{{ demoPassword }}</code></p>
+        <div class="demo-list">
+          <button type="button" *ngFor="let a of demoAccounts" (click)="useDemo(a)">
+            <span>{{ a.email }}</span><small>{{ a.role }}</small>
+          </button>
+        </div>
+      </section>
+    </form>
+  </main>
+</div>

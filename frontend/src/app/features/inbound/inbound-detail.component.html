@@ -1,0 +1,112 @@
+<ng-container *ngIf="state$ | async as s">
+  <nav class="breadcrumb" aria-label="Breadcrumb"><a routerLink="/inbound">Inbound</a><span aria-hidden="true">/</span><span aria-current="page">{{ s.data?.number || '…' }}</span></nav>
+  <div class="panel" *ngIf="s.status !== 'ready'">
+    <wms-state-view [status]="s.status" [error]="s.error" entity="this shipment" emptyTitle="Shipment not found" (retry)="reload$.next()"></wms-state-view>
+  </div>
+
+  <ng-container *ngIf="s.data as x">
+    <section class="page-header">
+      <div>
+        <h1>{{ x.number }} <wms-status [value]="x.status"></wms-status></h1>
+        <p>{{ x.supplierName }} → {{ x.warehouseName }} · expected {{ x.expectedAt | wmsDate: 'datetime' }}</p>
+      </div>
+      <div class="page-actions" *ngIf="canEdit">
+        <button *ngIf="x.status === 'EXPECTED' || x.status === 'RECEIVING'" type="button" class="btn" (click)="cancel(x)" [disabled]="busy">Cancel shipment</button>
+        <button *ngIf="x.status === 'EXPECTED'" type="button" class="btn btn-primary" (click)="start(x)" [disabled]="busy"><wms-icon name="play"></wms-icon>Start receiving</button>
+      </div>
+    </section>
+
+    <div class="inline-alert danger" *ngIf="banner" role="alert"><wms-icon name="alert-circle"></wms-icon><span>{{ banner }}</span></div>
+    <div class="inline-alert warning" *ngIf="x.discrepancy" role="status">
+      <wms-icon name="alert"></wms-icon><span>Received counts differ from the ASN: {{ x.totalReceived | number }} of {{ x.totalExpected | number }} units received.</span>
+    </div>
+
+    <section class="stat-row">
+      <div class="stat"><span>Supplier</span><strong>{{ x.supplierName }}</strong></div>
+      <div class="stat"><span>Purchase order</span><strong class="code">{{ x.poReference || '—' }}</strong></div>
+      <div class="stat"><span>Warehouse</span><strong>{{ x.warehouseName }}</strong></div>
+      <div class="stat"><span>Dock bin</span><strong class="code">{{ x.receivingBinCode || '—' }}</strong></div>
+      <div class="stat"><span>Expected units</span><strong>{{ x.totalExpected | number }}</strong></div>
+      <div class="stat"><span>Received units</span><strong>{{ x.status === 'EXPECTED' || x.status === 'RECEIVING' ? '—' : (x.totalReceived | number) }}</strong></div>
+    </section>
+
+    <!-- Receiving: count each line -->
+    <section class="panel" *ngIf="x.status === 'RECEIVING' && canEdit">
+      <div class="panel-heading"><div><h2>Count what arrived</h2><p>Stock goes into dock bin {{ x.receivingBinCode }}. Damaged units are held, not sellable.</p></div></div>
+      <div class="table-scroll" style="margin-top: 12px">
+        <table class="data-table">
+          <thead><tr><th scope="col">Product</th><th scope="col" class="num">Expected</th><th scope="col">Received</th><th scope="col">Damaged</th><th scope="col">Difference</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let g of receiveForm.controls; let i = index" [formGroup]="g">
+              <td><strong>{{ lineName(x, g.controls.productId.value) }}</strong></td>
+              <td class="num">{{ x.lines[i].expectedQty | number }}</td>
+              <td>
+                <input class="input num qty-input" type="number" min="0" formControlName="receivedQty" [attr.aria-label]="'Received, ' + x.lines[i].sku" />
+                <wms-field-error [control]="g.controls.receivedQty" label="Received"></wms-field-error>
+              </td>
+              <td>
+                <input class="input num qty-input" type="number" min="0" formControlName="damagedQty" [attr.aria-label]="'Damaged, ' + x.lines[i].sku" />
+                <wms-field-error [control]="g.controls.damagedQty" label="Damaged"></wms-field-error>
+              </td>
+              <td>
+                <span class="diff" [class.bad]="+g.controls.receivedQty.value !== x.lines[i].expectedQty">
+                  {{ +g.controls.receivedQty.value - x.lines[i].expectedQty === 0 ? 'Matches' : (+g.controls.receivedQty.value - x.lines[i].expectedQty > 0 ? '+' : '') + (+g.controls.receivedQty.value - x.lines[i].expectedQty) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" (click)="receive(x)" [disabled]="busy"><wms-icon name="check"></wms-icon>{{ busy ? 'Recording…' : 'Confirm receipt' }}</button>
+      </div>
+    </section>
+
+    <!-- Putaway: choose destination bins -->
+    <section class="panel" *ngIf="x.status === 'PUTAWAY_PENDING' && canEdit">
+      <div class="panel-heading"><div><h2>Put away</h2><p>Move sellable units from the dock into storage or picking bins. A bin with the most free space is suggested.</p></div></div>
+      <div class="table-scroll" style="margin-top: 12px">
+        <table class="data-table">
+          <thead><tr><th scope="col">Product</th><th scope="col" class="num">Units to store</th><th scope="col">Destination bin</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let g of putawayForm.controls" [formGroup]="g">
+              <td><strong>{{ lineName(x, g.controls.productId.value) }}</strong></td>
+              <td class="num">{{ toStore(x, g.controls.productId.value) | number }}</td>
+              <td>
+                <select class="select bin-select" formControlName="binId" aria-label="Destination bin">
+                  <option value="" disabled>Choose a bin…</option>
+                  <option *ngFor="let b of bins" [value]="b.id">{{ b.code }} · {{ b.zoneName }} · {{ free(b) | number }} free</option>
+                </select>
+                <wms-field-error [control]="g.controls.binId" label="Bin"></wms-field-error>
+                <small class="field-error" *ngIf="overflow(x, g.controls.binId.value) > 0">Over this bin's free space by {{ overflow(x, g.controls.binId.value) | number }} units</small>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" (click)="putaway(x)" [disabled]="busy"><wms-icon name="layers"></wms-icon>{{ busy ? 'Moving…' : 'Complete putaway' }}</button>
+      </div>
+    </section>
+
+    <!-- Lines (read-only) -->
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Lines</h2><p>{{ x.lines.length }} products on this ASN</p></div></div>
+      <div class="table-scroll" style="margin-top: 12px">
+        <table class="data-table">
+          <thead><tr><th scope="col">SKU</th><th scope="col">Product</th><th scope="col" class="num">Expected</th><th scope="col" class="num">Received</th><th scope="col" class="num">Damaged</th><th scope="col">Stored in</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let l of x.lines">
+              <td class="code">{{ l.sku }}</td>
+              <td><strong>{{ l.productName }}</strong></td>
+              <td class="num">{{ l.expectedQty | number }}</td>
+              <td class="num">{{ x.status === 'EXPECTED' || x.status === 'RECEIVING' ? '—' : (l.receivedQty | number) }}</td>
+              <td class="num">{{ x.status === 'EXPECTED' || x.status === 'RECEIVING' ? '—' : (l.damagedQty | number) }}</td>
+              <td class="code">{{ l.putawayBinCode || (x.status === 'PUTAWAY_PENDING' ? x.receivingBinCode + ' (dock)' : '—') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</ng-container>
