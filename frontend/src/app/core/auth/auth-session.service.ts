@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 
 import { AppConfigService } from '../config/app-config.service';
-import { LoginRequest, SessionUser, TokenResponse } from '../models';
+import { LoginRequest, MfaSetup, SessionUser, TokenResponse } from '../models';
 
 /** Requests marked with this skip the auth interceptor (login/refresh/logout themselves). */
 export const SKIP_AUTH = new HttpContextToken<boolean>(() => false);
@@ -102,6 +102,36 @@ export class AuthSession {
 
   changePassword(currentPassword: string, newPassword: string): Observable<void> {
     return this.http.post<void>(`${this.api}/auth/change-password`, { currentPassword, newPassword });
+  }
+
+  // ---------------------------------------------------------------- account links (signed out)
+
+  /** Always succeeds, whether or not the email exists. */
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/auth/forgot-password`, { email }, { context: this.skipAuth() });
+  }
+
+  resetPassword(token: string, password: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/auth/reset-password`, { token, password }, { context: this.skipAuth() });
+  }
+
+  acceptInvite(token: string, password: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/auth/accept-invite`, { token, password }, { context: this.skipAuth() });
+  }
+
+  // ---------------------------------------------------------------- two-factor sign-in (signed in)
+
+  setupMfa(): Observable<MfaSetup> {
+    return this.http.post<MfaSetup>(`${this.api}/auth/mfa/setup`, {});
+  }
+
+  /** Confirms the authenticator; re-reads the user so the UI reflects it. */
+  enableMfa(code: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/auth/mfa/enable`, { code }).pipe(tap(() => this.reloadUser().subscribe({ error: () => undefined })));
+  }
+
+  disableMfa(code: string): Observable<void> {
+    return this.http.post<void>(`${this.api}/auth/mfa/disable`, { code }).pipe(tap(() => this.reloadUser().subscribe({ error: () => undefined })));
   }
 
   private accept(res: TokenResponse): void {

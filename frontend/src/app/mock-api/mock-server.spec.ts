@@ -342,4 +342,54 @@ describe('mock API server', () => {
     expect(s.kpis.readyToShip).toBe(server.db.orders.filter((o) => o.status === 'PACKED').length);
     expect(s.ordersByDay).toHaveLength(7);
   });
+
+  it('requires the authenticator code once two-factor sign-in is on', () => {
+    const meera = client(server, 'meera.joshi@wms360.com');
+    expect(meera('POST', '/auth/mfa/setup').status).toBe(200);
+    expect(meera('POST', '/auth/mfa/enable', { code: '12' }).status).toBe(422);
+    expect(meera('POST', '/auth/mfa/enable', { code: '123456' }).status).toBe(204);
+    const login = (otp?: string) =>
+      server.handle({ method: 'POST', path: '/auth/login', query: new URLSearchParams(), body: { email: 'meera.joshi@wms360.com', password: DEMO_PASSWORD, otp }, header: () => null });
+    const noCode = login();
+    expect(noCode.status).toBe(401);
+    expect((noCode.body as { errors: { field: string; code: string }[] }).errors[0]).toMatchObject({ field: 'otp', code: 'mfa_required' });
+    expect(login('654321').status).toBe(200);
+    expect(admin('POST', `/users/${server.db.users.find((u) => u.email === 'meera.joshi@wms360.com')?.id}/mfa/reset`).status).toBe(204);
+    expect(login().status).toBe(200);
+  });
+
+  it('resets a forgotten password through a one-time link and audits it', () => {
+    jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    const anon = (path: string, body: unknown) => server.handle({ method: 'POST', path, query: new URLSearchParams(), body, header: () => null });
+    expect(anon('/auth/forgot-password', { email: 'vivek.nair@wms360.com' }).status).toBe(202);
+    expect(anon('/auth/forgot-password', { email: 'nobody@nowhere.com' }).status).toBe(202);
+    const token = server.db.userTokens[server.db.userTokens.length - 1].token;
+    expect(anon('/auth/reset-password', { token, password: 'short' }).status).toBe(422);
+    expect(anon('/auth/reset-password', { token, password: 'Vivek-New-Pass-1' }).status).toBe(204);
+    expect(anon('/auth/reset-password', { token, password: 'Vivek-New-Pass-2' }).status).toBe(401);
+    const audit = admin('GET', '/audit?action=PASSWORD_RESET');
+    expect((audit.body as { totalElements: number }).totalElements).toBe(1);
+  });
+
+  it('runs a cycle count and posts the differences to the ledger', () => {
+    const wh = server.db.warehouses[0].id;
+    const created = admin('POST', '/cycle-counts', { warehouseId: wh, zoneId: null, note: 'test' });
+    expect(created.status).toBe(201);
+    const c = created.body as { id: string; lines: { lineNo: number; expectedQty: number; balanceId: string }[] };
+    expect(admin('POST', `/cycle-counts/${c.id}/approve`).status).toBe(409);
+    // Short by 3 on a line with free stock (on-hand may never drop below what is reserved).
+    const free = (id: string) => {
+      const b = server.db.balances.find((x) => x.id === id);
+      return b ? b.onHand - b.reserved - b.damaged - b.blocked : 0;
+    };
+    const target = c.lines.find((l) => free(l.balanceId) >= 3) ?? c.lines[0];
+    const counts = c.lines.map((l) => ({ lineNo: l.lineNo, countedQty: l === target ? l.expectedQty - 3 : l.expectedQty }));
+    const counted = admin('POST', `/cycle-counts/${c.id}/counts`, { lines: counts });
+    expect((counted.body as { status: string; netVariance: number }).status).toBe('COUNTED');
+    expect((counted.body as { netVariance: number }).netVariance).toBe(-3);
+    const before = server.db.balances.find((b) => b.id === target.balanceId)?.onHand ?? 0;
+    const approved = admin('POST', `/cycle-counts/${c.id}/approve`);
+    expect(approved.body).toMatchObject({ status: 'APPROVED' });
+    expect(server.db.balances.find((b) => b.id === target.balanceId)?.onHand).toBe(before - 3);
+  });
 });

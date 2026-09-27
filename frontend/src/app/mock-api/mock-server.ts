@@ -285,12 +285,30 @@ export class MockServer {
   }
 
   sessionUser(user: DbUser): SessionUser {
-    const { password: _password, ...rest } = user;
+    const { password: _password, mfaSecret: _secret, ...rest } = user;
     return {
       ...rest,
       roleName: this.db.roles.find((r) => r.id === user.roleId)?.name ?? 'Unknown',
       permissions: this.permissionsOf(user),
+      mfaEnabled: !!user.mfaEnabled,
+      mfaSetupRequired: this.db.settings.security.twoFactor && !user.mfaEnabled,
     };
+  }
+
+  /** Security and administration trail (the API's /audit). */
+  audit(action: string, actor: DbUser | null, detail: string, actorEmail: string | null = actor?.email ?? null): void {
+    this.db.audit.unshift({
+      id: this.nextId('aud'),
+      at: this.nowIso(),
+      actorId: actor?.id ?? null,
+      actorEmail,
+      action,
+      targetType: null,
+      targetId: null,
+      detail,
+      ip: '127.0.0.1',
+    });
+    if (this.db.audit.length > 1000) this.db.audit.length = 1000;
   }
 
   // ---------------------------------------------------------------- scoping + paging

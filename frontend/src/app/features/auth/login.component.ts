@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { AppConfigService, AuthSession, errorMessage, WarehouseContext } from '@wms/core';
+import { AppConfigService, AuthSession, errorMessage, toApiError, WarehouseContext } from '@wms/core';
 
 interface DemoAccount {
   email: string;
@@ -21,6 +21,12 @@ export class LoginComponent {
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     rememberMe: new FormControl(false, { nonNullable: true }),
   });
+  /** Second step, once the server says the account uses two-factor sign-in. */
+  readonly otp = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{6}$/)] });
+  step: 'password' | 'code' = 'password';
+  readonly resetEmail = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] });
+  resetSent = false;
+  resetBusy = false;
   showPassword = false;
   busy = false;
   error = '';
@@ -59,9 +65,14 @@ export class LoginComponent {
   submit(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.busy) return;
+    if (this.step === 'code') {
+      this.otp.markAsTouched();
+      if (this.otp.invalid) return;
+    }
     this.busy = true;
     this.error = '';
-    this.session.login(this.form.getRawValue()).subscribe({
+    const request = { ...this.form.getRawValue(), otp: this.step === 'code' ? this.otp.value : undefined };
+    this.session.login(request).subscribe({
       next: async () => {
         await this.context.load();
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
@@ -71,10 +82,49 @@ export class LoginComponent {
       },
       error: (e: unknown) => {
         this.busy = false;
-        this.error = errorMessage(e);
-        this.form.controls.password.reset('');
+        const otpError = toApiError(e).fieldErrors.find((f) => f.field === 'otp');
+        if (otpError) {
+          // Password was right; the account needs its authenticator code.
+          this.error = this.step === 'code' || otpError.code === 'invalid' ? otpError.message : '';
+          this.step = 'code';
+          this.otp.reset('');
+        } else {
+          this.error = errorMessage(e);
+          this.step = 'password';
+          this.form.controls.password.reset('');
+        }
         this.cdr.markForCheck();
       },
     });
+  }
+
+  backToPassword(): void {
+    this.step = 'password';
+    this.error = '';
+    this.otp.reset('');
+    this.form.controls.password.reset('');
+  }
+
+  toggleForgot(): void {
+    this.forgotOpen = !this.forgotOpen;
+    this.resetSent = false;
+    if (this.forgotOpen && this.form.controls.email.valid) this.resetEmail.setValue(this.form.controls.email.value);
+  }
+
+  /** The answer is the same whether or not the email exists, so nothing is revealed. */
+  sendReset(): void {
+    this.resetEmail.markAsTouched();
+    if (this.resetEmail.invalid || this.resetBusy) return;
+    this.resetBusy = true;
+    this.session.requestPasswordReset(this.resetEmail.value).subscribe({
+      next: () => this.resetDone(),
+      error: () => this.resetDone(),
+    });
+  }
+
+  private resetDone(): void {
+    this.resetBusy = false;
+    this.resetSent = true;
+    this.cdr.markForCheck();
   }
 }

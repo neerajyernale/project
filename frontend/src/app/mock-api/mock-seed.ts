@@ -9,7 +9,7 @@ import { ALL_PERMISSIONS, Settings, ZoneType } from '@wms/core';
 import { Db, DbBin, DbProduct, DbRole, DbUser, DbWarehouse, DbZone } from './mock-types';
 import { MockServer } from './mock-server';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 export const DEMO_PASSWORD = 'Wms360-Demo!';
 
 const MIN = 60 * 1000;
@@ -158,7 +158,8 @@ const SETTINGS: Settings = {
   general: { companyName: 'WMS360 Logistics Pvt Ltd', currency: 'INR', timezone: 'Asia/Kolkata', dateFormat: 'DD MMM YYYY' },
   operations: { defaultWarehouseId: 'wh-mum', autoAssignPickers: true, capacityAlertPct: 80, lowStockBufferPct: 20 },
   notifications: { lowStock: true, capacity: true, orderDelay: true, inboundReminder: false, dailySummary: true },
-  security: { twoFactor: true, sessionTimeoutMin: 30, passwordMinLength: 12, ipAllowlist: '103.21.58.0/24\n180.149.48.0/22' },
+  // Same as the backend seed: two-factor optional, no allowlist (the real API enforces both).
+  security: { twoFactor: false, sessionTimeoutMin: 30, passwordMinLength: 12, ipAllowlist: '' },
   version: 1,
 };
 
@@ -186,6 +187,9 @@ export function emptyDb(): Db {
     notifications: [],
     settings: structuredCloneSafe(SETTINGS),
     reportRuns: {},
+    audit: [],
+    cycleCounts: [],
+    userTokens: [],
     sessions: [],
     idempotency: {},
   };

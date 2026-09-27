@@ -115,3 +115,44 @@ export interface TransferCreate {
   lines: { productId: string; qty: number }[];
   note: string;
 }
+
+export type CycleCountStatus = 'OPEN' | 'COUNTED' | 'APPROVED' | 'CANCELLED';
+
+export interface CycleCountLine {
+  lineNo: number;
+  balanceId: string;
+  binId: string;
+  binCode: string;
+  productId: string;
+  sku: string;
+  productName: string;
+  expectedQty: number;
+  countedQty: number | null;
+  /** countedQty − expectedQty (0 until counted). */
+  variance: number;
+}
+
+export interface CycleCount {
+  id: string;
+  number: string;
+  warehouseId: string;
+  warehouseName: string;
+  zoneId: string | null;
+  status: CycleCountStatus;
+  note: string;
+  lines: CycleCountLine[];
+  lineCount: number;
+  varianceLines: number;
+  netVariance: number;
+  countedBy: string | null;
+  countedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export interface CycleCountCreate {
+  warehouseId: string;
+  zoneId: string | null;
+  note: string;
+}

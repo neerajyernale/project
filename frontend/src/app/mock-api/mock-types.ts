@@ -4,6 +4,8 @@
  */
 import {
   ActivityEntry,
+  AuditEntry,
+  CycleCount,
   Bin,
   Customer,
   FieldError,
@@ -67,6 +69,19 @@ export interface DbPickTask extends Omit<PickTask, 'lines'> {
 
 export interface DbUser extends Omit<User, 'roleName'> {
   password: string;
+  /** Mock only: a real authenticator secret is never stored in plain text. */
+  mfaSecret?: string | null;
+  mfaEnabled?: boolean;
+}
+
+export type DbCycleCount = Omit<CycleCount, 'warehouseName' | 'lineCount' | 'varianceLines' | 'netVariance'>;
+
+export interface DbUserToken {
+  token: string;
+  userId: string;
+  purpose: 'INVITE' | 'PASSWORD_RESET';
+  expiresAt: number;
+  used: boolean;
 }
 
 export type DbRole = Omit<Role, 'userCount'>;
@@ -123,6 +138,9 @@ export interface Db {
   notifications: DbNotification[];
   settings: Settings;
   reportRuns: Record<string, string>;
+  audit: AuditEntry[];
+  cycleCounts: DbCycleCount[];
+  userTokens: DbUserToken[];
   sessions: DbSession[];
   idempotency: Record<string, MockResponse>;
 }

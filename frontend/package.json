@@ -17,7 +17,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --coverage",
-    "e2e": "node e2e/run-all.mjs"
+    "e2e": "node e2e/run-all.mjs",
+    "start:backend": "node scripts/dev.mjs --backend"
   },
   "dependencies": {
     "@angular/animations": "~14.3.0",

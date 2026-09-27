@@ -29,8 +29,20 @@ export function registerAdminRoutes(s: MockServer): void {
       ]);
       const user = s.db.users.find((u) => u.email.toLowerCase() === email);
       // Same message for unknown user and wrong password, so accounts cannot be enumerated.
-      if (!user || user.password !== password) throw unauthorized('The email or password is incorrect.');
+      if (!user || user.password !== password) {
+        s.audit('LOGIN_FAILED', user ?? null, 'Wrong email or password', email);
+        throw unauthorized('The email or password is incorrect.');
+      }
       if (user.status !== 'ACTIVE') throw unauthorized('This account is disabled. Contact your administrator.');
+      if (user.mfaEnabled) {
+        // Mock only: any 6-digit code is accepted; the real API checks it against the authenticator secret.
+        const otp = s.str(ctx.body['otp']);
+        if (!/^\d{6}$/.test(otp)) {
+          const detail = otp ? 'That code is not valid. Enter the current code from your authenticator app.' : 'Enter the 6-digit code from your authenticator app.';
+          throw new ApiException(401, 'Unauthorized', detail, [{ field: 'otp', code: otp ? 'invalid' : 'mfa_required', message: detail }]);
+        }
+      }
+      s.audit('LOGIN_SUCCEEDED', user, ctx.body['rememberMe'] === true ? 'Remember me' : '');
       const rememberMe = ctx.body['rememberMe'] === true;
       const session = s.openSession(user, rememberMe);
       s.cookieJar.set(session.refreshToken, rememberMe);
@@ -92,6 +104,7 @@ export function registerAdminRoutes(s: MockServer): void {
       ]);
       ctx.user.password = next;
       s.log('admin', 'info', 'Password changed', ctx.user.email, null, ctx.user.name);
+      s.audit('PASSWORD_CHANGED', ctx.user, '');
       return undefined;
     },
     { status: 204 },
@@ -166,6 +179,7 @@ export function registerAdminRoutes(s: MockServer): void {
       };
       s.db.users.push(user);
       s.log('admin', 'info', `User ${user.name} invited`, `${user.email} · ${toUser(user).roleName}`, null, s.actor(ctx));
+      s.audit('USER_CREATED', ctx.user, `${user.email} · ${toUser(user).roleName}`);
       return toUser(user);
     },
     { permission: 'users:create' },
@@ -184,6 +198,7 @@ export function registerAdminRoutes(s: MockServer): void {
       }
       Object.assign(user, v, { version: user.version + 1 });
       s.log('admin', 'info', `User ${user.name} updated`, toUser(user).roleName, null, s.actor(ctx));
+      s.audit('USER_UPDATED', ctx.user, `${user.email} · ${toUser(user).roleName}`);
       return toUser(user);
     },
     { permission: 'users:edit' },
@@ -201,6 +216,7 @@ export function registerAdminRoutes(s: MockServer): void {
         user.version++;
         if (status === 'DISABLED') s.db.sessions = s.db.sessions.filter((x) => x.userId !== user.id);
         s.log('admin', status === 'DISABLED' ? 'warning' : 'success', `User ${user.name} ${action}d`, user.email, null, s.actor(ctx));
+        s.audit(status === 'DISABLED' ? 'USER_DISABLED' : 'USER_ENABLED', ctx.user, user.email);
         return toUser(user);
       },
       { permission: 'users:edit', status: 200 },
@@ -231,6 +247,7 @@ export function registerAdminRoutes(s: MockServer): void {
       const role = { id: s.nextId('role'), ...v, system: false };
       s.db.roles.push(role);
       s.log('admin', 'info', `Role ${role.name} created`, `${role.permissions.length} permissions`, null, s.actor(ctx));
+      s.audit('ROLE_CREATED', ctx.user, `${role.name} · ${role.permissions.length} permissions`);
       return toRole(role);
     },
     { permission: 'users:create' },
@@ -248,6 +265,7 @@ export function registerAdminRoutes(s: MockServer): void {
       }
       Object.assign(role, role.system ? { description: v.description, permissions: v.permissions } : v);
       s.log('admin', 'warning', `Permissions changed for ${role.name}`, `${role.permissions.length} permissions`, null, s.actor(ctx));
+      s.audit('ROLE_UPDATED', ctx.user, `${role.name} · ${role.permissions.length} permissions`);
       return toRole(role);
     },
     { permission: 'users:edit' },
@@ -291,6 +309,7 @@ export function registerAdminRoutes(s: MockServer): void {
       ]);
       s.db.settings = { ...next, version: s.db.settings.version + 1 };
       s.log('admin', 'info', 'Settings updated', 'Workspace configuration', null, s.actor(ctx));
+      s.audit('SETTINGS_UPDATED', ctx.user, `2FA ${s.db.settings.security.twoFactor ? 'required' : 'optional'} · timeout ${s.db.settings.security.sessionTimeoutMin} min`);
       return s.db.settings;
     },
     { permission: 'settings:edit' },

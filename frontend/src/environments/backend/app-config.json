@@ -1,0 +1,6 @@
+{
+  "environment": "local-backend",
+  "apiBaseUrl": "/api/v1",
+  "useMockApi": false,
+  "mockLatencyMs": 0
+}

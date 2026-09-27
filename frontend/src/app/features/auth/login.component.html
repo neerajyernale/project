@@ -32,6 +32,7 @@
         <div><strong>Couldn't sign in.</strong> {{ error }}</div>
       </div>
 
+      <ng-container *ngIf="step === 'password'; else codeStep">
       <div class="field">
         <label for="email">Email address</label>
         <div class="input-icon">
@@ -55,15 +56,41 @@
 
       <div class="options">
         <label class="check"><input type="checkbox" formControlName="rememberMe" /> Keep me signed in for 7 days</label>
-        <button type="button" class="link-btn" (click)="forgotOpen = !forgotOpen" [attr.aria-expanded]="forgotOpen">Forgot password?</button>
+        <button type="button" class="link-btn" (click)="toggleForgot()" [attr.aria-expanded]="forgotOpen">Forgot password?</button>
       </div>
-      <p class="forgot" *ngIf="forgotOpen" role="note">Ask your WMS360 administrator to reset it from Users &amp; Roles.</p>
+      <div class="forgot" *ngIf="forgotOpen" role="group" aria-labelledby="forgot-title">
+        <ng-container *ngIf="!resetSent; else sentNote">
+          <p id="forgot-title">We'll email you a link to choose a new password.</p>
+          <div class="forgot-row">
+            <input class="input" type="email" [formControl]="resetEmail" placeholder="name@company.com" aria-label="Email for the reset link" (keydown.enter)="$event.preventDefault(); sendReset()" />
+            <button type="button" class="btn" (click)="sendReset()" [disabled]="resetBusy">{{ resetBusy ? 'Sending…' : 'Send link' }}</button>
+          </div>
+          <wms-field-error [control]="resetEmail" label="Email"></wms-field-error>
+        </ng-container>
+        <ng-template #sentNote>
+          <p role="status"><wms-icon name="check-circle"></wms-icon> If an account uses {{ resetEmail.value }}, a reset link is on its way. It works for one hour.</p>
+        </ng-template>
+      </div>
+      </ng-container>
+
+      <ng-template #codeStep>
+        <div class="field">
+          <label for="otp">Authenticator code</label>
+          <p class="sub" style="margin: 0 0 8px">Open your authenticator app and enter the 6-digit code for WMS360.</p>
+          <div class="input-icon">
+            <wms-icon name="shield"></wms-icon>
+            <input id="otp" class="input code-input" [formControl]="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" wmsAutofocus />
+          </div>
+          <wms-field-error [control]="otp" label="Code"></wms-field-error>
+        </div>
+        <div class="options"><button type="button" class="link-btn" (click)="backToPassword()">Use a different account</button></div>
+      </ng-template>
 
       <button type="submit" class="btn btn-primary submit" [disabled]="busy">
-        <span class="spinner" *ngIf="busy" aria-hidden="true"></span>{{ busy ? 'Signing in…' : 'Sign in' }}
+        <span class="spinner" *ngIf="busy" aria-hidden="true"></span>{{ busy ? 'Signing in…' : step === 'code' ? 'Verify and sign in' : 'Sign in' }}
       </button>
 
-      <section class="demo" *ngIf="usesMockApi" aria-label="Demo accounts">
+      <section class="demo" *ngIf="usesMockApi && step === 'password'" aria-label="Demo accounts">
         <p><strong>Demo accounts</strong> · password <code>{{ demoPassword }}</code></p>
         <div class="demo-list">
           <button type="button" *ngFor="let a of demoAccounts" (click)="useDemo(a)">

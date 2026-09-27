@@ -14,11 +14,12 @@ import {
 } from '@wms/core';
 import { SharedModule } from '@wms/design-system';
 import { AppComponent } from './app.component';
+import { AccountLinkComponent } from './features/auth/account-link.component';
 import { LoginComponent } from './features/auth/login.component';
 import { ShellComponent } from './layout/shell.component';
 import { SidebarComponent } from './layout/sidebar.component';
 import { ForbiddenComponent, NotFoundComponent, UnavailablePageModule } from './layout/status-pages.component';
-import { ChangePasswordDialogComponent, ShortcutsDialogComponent, TopbarComponent } from './layout/topbar.component';
+import { ChangePasswordDialogComponent, MfaDialogComponent, ShortcutsDialogComponent, TopbarComponent } from './layout/topbar.component';
 import { MockApiInterceptor } from './mock-api/mock-api.interceptor';
 
 /** Config first, then resume any session from the refresh cookie, then the warehouse list. */
@@ -57,8 +58,10 @@ export class GlobalErrorHandler implements ErrorHandler {
     SidebarComponent,
     TopbarComponent,
     ChangePasswordDialogComponent,
+    MfaDialogComponent,
     ShortcutsDialogComponent,
     LoginComponent,
+    AccountLinkComponent,
     ForbiddenComponent,
     NotFoundComponent,
   ],

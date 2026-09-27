@@ -1,6 +1,7 @@
 import { Routes, UrlMatcher, UrlSegment } from '@angular/router';
 
 import { AuthGuard, GuestGuard } from '@wms/core';
+import { AccountLinkComponent } from './features/auth/account-link.component';
 import { LoginComponent } from './features/auth/login.component';
 import { ShellComponent } from './layout/shell.component';
 import { ForbiddenComponent, NotFoundComponent, UnavailableComponent } from './layout/status-pages.component';
@@ -18,6 +19,9 @@ export function domain(...roots: string[]): UrlMatcher {
 export function shellRoutes(domainRoutes: Routes, home = 'dashboard'): Routes {
   return [
     { path: 'login', component: LoginComponent, canActivate: [GuestGuard], title: 'Sign in · WMS360' },
+    // Links from invitation and password-reset emails.
+    { path: 'accept-invite', component: AccountLinkComponent, data: { mode: 'invite' }, title: 'Activate account · WMS360' },
+    { path: 'reset-password', component: AccountLinkComponent, data: { mode: 'reset' }, title: 'Reset password · WMS360' },
     {
       path: '',
       component: ShellComponent,

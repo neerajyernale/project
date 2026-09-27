@@ -4,6 +4,9 @@ import { Observable } from 'rxjs';
 import {
   AdjustmentRequest,
   ActivityEntry,
+  AuditEntry,
+  CycleCount,
+  CycleCountCreate,
   Bin,
   BinCreate,
   Customer,
@@ -211,6 +214,27 @@ export class InventoryApi {
   transferCommand(id: string, command: 'approve' | 'reject' | 'dispatch' | 'receive' | 'cancel', body: unknown = {}): Observable<Transfer> {
     return this.api.post(`/transfers/${id}/${command}`, body, { idempotent: true });
   }
+
+  cycleCounts(q: QueryParams): Observable<Page<CycleCount>> {
+    return this.api.get('/cycle-counts', q);
+  }
+  cycleCount(id: string): Observable<CycleCount> {
+    return this.api.get(`/cycle-counts/${id}`);
+  }
+  createCycleCount(body: CycleCountCreate): Observable<CycleCount> {
+    return this.api.post('/cycle-counts', body);
+  }
+  /** Counts for some or all lines; the count becomes COUNTED once every line has one. */
+  recordCounts(id: string, lines: { lineNo: number; countedQty: number }[]): Observable<CycleCount> {
+    return this.api.post(`/cycle-counts/${id}/counts`, { lines });
+  }
+  /** Posts every difference to the ledger as an adjustment. */
+  approveCycleCount(id: string): Observable<CycleCount> {
+    return this.api.post(`/cycle-counts/${id}/approve`, {}, { idempotent: true });
+  }
+  cancelCycleCount(id: string): Observable<CycleCount> {
+    return this.api.post(`/cycle-counts/${id}/cancel`);
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -352,6 +376,16 @@ export class AdminApi {
   }
   setUserEnabled(id: string, enabled: boolean): Observable<User> {
     return this.api.post(`/users/${id}/${enabled ? 'enable' : 'disable'}`);
+  }
+  resendInvite(id: string): Observable<void> {
+    return this.api.post(`/users/${id}/resend-invite`);
+  }
+  /** For a user who lost their authenticator: they sign in with their password and set it up again. */
+  resetMfa(id: string): Observable<void> {
+    return this.api.post(`/users/${id}/mfa/reset`);
+  }
+  audit(q: QueryParams): Observable<Page<AuditEntry>> {
+    return this.api.get('/audit', q);
   }
   roles(): Observable<Role[]> {
     return this.api.get('/roles');

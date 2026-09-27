@@ -69,3 +69,11 @@
   .login-right { width: 100%; flex: 1 0 auto; padding: 28px 16px; align-items: flex-start; }
   .demo-list { grid-template-columns: 1fr; }
 }
+
+.forgot-row { display: flex; gap: 8px; margin-top: 8px; }
+.forgot-row .input { flex: 1; }
+.forgot p { display: flex; align-items: center; gap: 6px; margin: 0; }
+.code-input { letter-spacing: 0.4em; font-family: var(--wms-font-mono); font-size: 18px; }
+
+.login-page.single { justify-content: center; }
+.login-page.single .login-right { flex: 1; }

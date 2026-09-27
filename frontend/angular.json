@@ -72,6 +72,30 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "backend": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "assets": [
+                "src/favicon.svg",
+                {
+                  "glob": "**/*",
+                  "input": "src/assets",
+                  "output": "assets",
+                  "ignore": [
+                    "config/app-config.json"
+                  ]
+                },
+                {
+                  "glob": "app-config.json",
+                  "input": "src/environments/backend",
+                  "output": "assets/config"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -84,6 +108,10 @@
             },
             "development": {
               "browserTarget": "shell:build:development"
+            },
+            "backend": {
+              "browserTarget": "shell:build:backend",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development",

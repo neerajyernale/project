@@ -4,13 +4,14 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
-import { AdminApi, AuthSession, ListController, Role, ToastService, User, WarehouseContext } from '@wms/core';
+import { AdminApi, AuthSession, errorMessage, ListController, Role, ToastService, User, WarehouseContext } from '@wms/core';
 import { DialogService, FormDialog } from '@wms/design-system';
 
 export const ADMIN_TABS = `
   <nav class="tabs" aria-label="Access management">
     <a routerLink="/admin/users" routerLinkActive="active">Users</a>
     <a routerLink="/admin/roles" routerLinkActive="active">Roles &amp; permissions</a>
+    <a routerLink="/admin/audit" routerLinkActive="active">Audit log</a>
   </nav>
 `;
 
@@ -151,8 +152,12 @@ export class UserDialogComponent extends FormDialog<User> {
                   <div class="row-actions" *ngIf="u.id !== me">
                     <button *wmsCan="'users:edit'" type="button" class="link-btn" (click)="edit(u)">Edit</button>
                     <ng-container *wmsCan="'users:edit'">
-                      <button type="button" class="link-btn" (click)="setEnabled(u, u.status !== 'ACTIVE')">{{ u.status === 'ACTIVE' ? 'Disable' : 'Enable' }}</button>
+                      <button type="button" class="link-btn" (click)="setEnabled(u, u.status === 'DISABLED')">{{ u.status === 'DISABLED' ? 'Enable' : 'Disable' }}</button>
                     </ng-container>
+                    <ng-container *ngIf="u.status === 'INVITED'">
+                      <button *wmsCan="'users:create'" type="button" class="link-btn" (click)="resendInvite(u)">Resend invite</button>
+                    </ng-container>
+                    <button *wmsCan="'users:edit'" type="button" class="link-btn" (click)="resetMfa(u)">Reset 2FA</button>
                   </div>
                 </td>
               </tr>
@@ -218,6 +223,26 @@ export class UsersComponent implements OnDestroy {
         this.toasts.success(`${u.name} ${enabled ? 'enabled' : 'disabled'}`);
         this.list.reload();
       });
+  }
+
+  resendInvite(u: User): void {
+    this.api.resendInvite(u.id).subscribe({
+      next: () => this.toasts.success(`Invitation sent again to ${u.email}`),
+      error: (e: unknown) => this.toasts.error(errorMessage(e)),
+    });
+  }
+
+  /** For a user who lost their phone: signs them out; they set up a new authenticator at next sign-in. */
+  resetMfa(u: User): void {
+    this.dialogs
+      .confirm({
+        title: `Reset two-factor sign-in for ${u.name}?`,
+        message: 'Their authenticator stops working and they are signed out. They can sign in with their password and set up a new one.',
+        confirmLabel: 'Reset 2FA',
+        tone: 'danger',
+        action: () => this.api.resetMfa(u.id),
+      })
+      .subscribe((r) => r && this.toasts.success(`Two-factor sign-in reset for ${u.name}`));
   }
 
   trackById = (_: number, u: User) => u.id;

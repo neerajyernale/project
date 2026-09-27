@@ -2,12 +2,15 @@
 //   npm start                      shell + all 8 remotes
 //   npm start -- inventory admin   shell + only those remotes; the others show "unavailable"
 //   SHELL_PORT=4210 npm start      shell on another port (remotes keep 4201–4208)
+//   npm run start:backend          same, but the shell talks to the Spring Boot API on :8080
+//                                  (proxy.conf.json) instead of the in-browser mock
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { createServer } from 'net';
 
 const remotes = JSON.parse(readFileSync(new URL('../federation.remotes.json', import.meta.url), 'utf8'));
-const wanted = process.argv.slice(2);
+const backend = process.argv.includes('--backend');
+const wanted = process.argv.slice(2).filter((a) => a !== '--backend');
 const unknown = wanted.filter((n) => !remotes.some((r) => r.name === n));
 if (unknown.length) {
   console.error(`Unknown remote(s): ${unknown.join(', ')}. Known: ${remotes.map((r) => r.name).join(', ')}`);
@@ -39,7 +42,9 @@ const width = Math.max(...projects.map((p) => p.project.length));
 const children = [];
 
 for (const { project, port } of projects) {
-  const child = spawn('npx', ['ng', 'serve', project, '--port', String(port)], { shell: true, env: { ...process.env, FORCE_COLOR: '1' } });
+  const args = ['ng', 'serve', project, '--port', String(port)];
+  if (backend && project === 'shell') args.push('--configuration', 'backend');
+  const child = spawn('npx', args, { shell: true, env: { ...process.env, FORCE_COLOR: '1' } });
   const prefix = `${project.padEnd(width)} |`;
   let buffer = '';
   const print = (chunk) => {

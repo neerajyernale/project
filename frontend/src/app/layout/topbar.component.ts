@@ -17,7 +17,7 @@ import { Router } from '@angular/router';
 import { Subject, merge, of, timer } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, takeUntil, tap } from 'rxjs/operators';
 
-import { applyServerErrors, AuthSession, InsightsApi, Notification, SearchResult, SessionUser, ToastService } from '@wms/core';
+import { applyServerErrors, AuthSession, errorMessage, InsightsApi, MfaSetup, Notification, SearchResult, SessionUser, ToastService } from '@wms/core';
 import { DialogService } from '@wms/design-system';
 
 const SEARCH_ICONS: Record<SearchResult['type'], string> = {
@@ -177,6 +177,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.dialogs.open(ChangePasswordDialogComponent);
   }
 
+  openMfa(): void {
+    this.profileOpen = false;
+    this.dialogs.open(MfaDialogComponent);
+  }
+
   showShortcuts(): void {
     this.dialogs.open(ShortcutsDialogComponent);
   }
@@ -268,6 +273,121 @@ export class ChangePasswordDialogComponent {
       error: (e: unknown) => {
         this.busy = false;
         this.error = applyServerErrors(this.form, e).join(' ');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+}
+
+/**
+ * Two-factor sign-in: set up an authenticator app (scan the otpauth link or type the key, then
+ * confirm with a code), or turn it off with a current code.
+ */
+@Component({
+  selector: 'wms-mfa-dialog',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="dialog sm" role="dialog" aria-labelledby="mfa-title">
+      <div class="dialog-header">
+        <div><h2 id="mfa-title">Two-factor sign-in</h2><p>{{ enabled ? 'On: you enter a code from your authenticator app when you sign in.' : 'Protect your account with a code from an authenticator app.' }}</p></div>
+        <button type="button" class="icon-close" (click)="ref.close()" aria-label="Close"><wms-icon name="x" [size]="18"></wms-icon></button>
+      </div>
+      <div class="dialog-body">
+        <div class="inline-alert danger" *ngIf="error" role="alert"><wms-icon name="alert-circle"></wms-icon><span>{{ error }}</span></div>
+
+        <ng-container *ngIf="!enabled && !setup">
+          <ol class="mfa-steps">
+            <li>Install an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…).</li>
+            <li>Add WMS360 to it with the key we show you.</li>
+            <li>Enter the 6-digit code it displays to confirm.</li>
+          </ol>
+        </ng-container>
+
+        <ng-container *ngIf="setup">
+          <p>Add this key to your authenticator app (type it in, or open the link on your phone):</p>
+          <p class="mfa-key" aria-label="Setup key">{{ groupedSecret }}</p>
+          <p><a [href]="setup.otpauthUri">Open in authenticator app</a></p>
+        </ng-container>
+
+        <div class="field" *ngIf="setup || enabled" style="margin-top: 14px">
+          <label for="mfa-code">{{ enabled ? 'Current code (to turn it off)' : 'Code from the app' }}</label>
+          <input id="mfa-code" class="input mfa-code" [formControl]="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" />
+          <wms-field-error [control]="code" label="Code"></wms-field-error>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn" (click)="ref.close()">Close</button>
+        <button *ngIf="!enabled && !setup" type="button" class="btn btn-primary" (click)="start()" [disabled]="busy">{{ busy ? 'Preparing…' : 'Set up' }}</button>
+        <button *ngIf="setup" type="button" class="btn btn-primary" (click)="confirm()" [disabled]="busy">{{ busy ? 'Checking…' : 'Turn on' }}</button>
+        <!-- If the organisation requires two-factor sign-in, the server refuses and says so. -->
+        <button *ngIf="enabled" type="button" class="btn btn-danger" (click)="turnOff()" [disabled]="busy">Turn off</button>
+      </div>
+    </div>
+  `,
+  styles: [
+    '.mfa-steps { margin: 0; padding-left: 18px; display: grid; gap: 6px; }',
+    '.mfa-key { font-family: var(--wms-font-mono); font-size: 16px; letter-spacing: 0.08em; background: var(--wms-surface-muted); padding: 10px 12px; border-radius: 6px; word-break: break-all; }',
+    '.mfa-code { letter-spacing: 0.4em; font-family: var(--wms-font-mono); font-size: 18px; }',
+  ],
+})
+export class MfaDialogComponent {
+  readonly code = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\d{6}$/)] });
+  setup: MfaSetup | null = null;
+  busy = false;
+  error = '';
+
+  constructor(
+    readonly ref: DialogRef<void>,
+    private readonly session: AuthSession,
+    private readonly toasts: ToastService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
+
+  get enabled(): boolean {
+    return !!this.session.user?.mfaEnabled;
+  }
+
+  get groupedSecret(): string {
+    return (this.setup?.secret ?? '').replace(/(.{4})/g, '$1 ').trim();
+  }
+
+  start(): void {
+    this.run(this.session.setupMfa(), (s) => {
+      this.setup = s;
+    });
+  }
+
+  confirm(): void {
+    this.code.markAsTouched();
+    if (this.code.invalid) return;
+    this.run(this.session.enableMfa(this.code.value), () => {
+      this.toasts.success('Two-factor sign-in is on');
+      this.ref.close();
+    });
+  }
+
+  turnOff(): void {
+    this.code.markAsTouched();
+    if (this.code.invalid) return;
+    this.run(this.session.disableMfa(this.code.value), () => {
+      this.toasts.success('Two-factor sign-in is off');
+      this.ref.close();
+    });
+  }
+
+  private run<T>(call: import('rxjs').Observable<T>, done: (v: T) => void): void {
+    this.busy = true;
+    this.error = '';
+    call.subscribe({
+      next: (v) => {
+        this.busy = false;
+        done(v);
+        this.cdr.markForCheck();
+      },
+      error: (e: unknown) => {
+        this.busy = false;
+        this.error = errorMessage(e);
+        this.code.reset('');
         this.cdr.markForCheck();
       },
     });

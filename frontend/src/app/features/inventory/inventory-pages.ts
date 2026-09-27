@@ -20,10 +20,11 @@ import {
 import { ConfirmData, DialogService, downloadCsv } from '@wms/design-system';
 import { BalancesDialogComponent, TransferDialogComponent } from './inventory-dialogs';
 
-const INVENTORY_TABS = `
+export const INVENTORY_TABS = `
   <nav class="tabs" aria-label="Inventory views">
     <a routerLink="/inventory" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Stock</a>
     <a routerLink="/inventory/movements" routerLinkActive="active">Movements</a>
+    <a routerLink="/inventory/counts" routerLinkActive="active">Cycle counts</a>
   </nav>
 `;
 

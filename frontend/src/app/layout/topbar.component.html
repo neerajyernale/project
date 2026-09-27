@@ -84,9 +84,16 @@
         <hr />
         <a *wmsCan="'settings:view'" routerLink="/settings" role="menuitem" (click)="profileOpen = false"><wms-icon name="settings"></wms-icon>Settings</a>
         <button type="button" role="menuitem" (click)="changePassword()"><wms-icon name="key"></wms-icon>Change password</button>
+        <button type="button" role="menuitem" (click)="openMfa()"><wms-icon name="shield"></wms-icon>Two-factor sign-in<span class="menu-note">{{ user?.mfaEnabled ? 'On' : 'Off' }}</span></button>
         <hr />
         <button type="button" role="menuitem" (click)="signOut()"><wms-icon name="logout"></wms-icon>Sign out</button>
       </div>
     </div>
   </div>
 </header>
+
+<div class="mfa-banner" *ngIf="user?.mfaSetupRequired" role="alert">
+  <wms-icon name="shield"></wms-icon>
+  <span><strong>Set up two-factor sign-in to continue.</strong> Your organisation requires it; other pages stay locked until you do.</span>
+  <button type="button" class="btn btn-primary" (click)="openMfa()">Set up now</button>
+</div>

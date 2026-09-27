@@ -1,6 +1,7 @@
 import { CookieJar, MockServer } from './mock-server';
 import { Db } from './mock-types';
 import { SCHEMA_VERSION, emptyDb, seed } from './mock-seed';
+import { registerAccountRoutes } from './routes/account.routes';
 import { registerAdminRoutes } from './routes/admin.routes';
 import { registerCatalogRoutes } from './routes/catalog.routes';
 import { registerFulfillmentRoutes } from './routes/fulfillment.routes';
@@ -16,6 +17,7 @@ const COOKIE_KEY = 'wms360.mock.refresh-cookie';
 export function buildServer(db: Db, onChange?: (db: Db) => void): MockServer {
   const server = new MockServer(db, onChange);
   registerAdminRoutes(server);
+  registerAccountRoutes(server);
   registerWarehouseRoutes(server);
   registerCatalogRoutes(server);
   registerInventoryRoutes(server);

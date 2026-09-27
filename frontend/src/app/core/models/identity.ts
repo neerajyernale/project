@@ -15,12 +15,36 @@ export interface User {
 
 export interface SessionUser extends User {
   permissions: string[];
+  /** The user has confirmed an authenticator app. */
+  mfaEnabled?: boolean;
+  /** The workspace requires two-factor sign-in and this user has not set it up; only account pages work until they do. */
+  mfaSetupRequired?: boolean;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
   rememberMe: boolean;
+  /** 6-digit authenticator code, once two-factor sign-in is on. */
+  otp?: string;
+}
+
+/** Scan `otpauthUri` as a QR code or type `secret` into the authenticator app. */
+export interface MfaSetup {
+  secret: string;
+  otpauthUri: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  at: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  detail: string;
+  ip: string | null;
 }
 
 export interface TokenResponse {
